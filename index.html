@@ -26,10 +26,11 @@ body {
 
 /* ── TICKER ── */
 #ticker {
-  position:fixed; top:0; left:0; right:0; z-index:999;
+  position:fixed; top:0; left:0; right:0; z-index:9;
   background:#cc1133; color:#fff;
   font-size:10px; font-weight:700;
   padding:4px 0; overflow:hidden; white-space:nowrap;
+  pointer-events:none;
 }
 .tick-inner { display:inline-block; animation: tick 22s linear infinite; padding-left:100%; }
 @keyframes tick { from{transform:translateX(0)} to{transform:translateX(-100%)} }
