@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>💀 Catching Falling Knives</title>
+<style>
+  :root {
+    --font-mono: 'Courier New', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    --bg: #050810;
+    --panel: #0a0f1e;
+    --border: #1a2540;
+    --green: #00ff88;
+    --red: #ff3355;
+    --gold: #ffd700;
+    --cyan: #00d4ff;
+    --orange: #ff6600;
+    --white: #e8eaf0;
+    --dim: #4a5568;
+    --glow-g: 0 0 10px #00ff8866, 0 0 30px #00ff8833;
+    --glow-r: 0 0 10px #ff335566, 0 0 30px #ff335533;
+    --glow-c: 0 0 10px #00d4ff66, 0 0 30px #00d4ff33;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  /* SCANLINES OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ===== MENU ===== */
+  #menu {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: radial-gradient(ellipse at center, #0a1428 0%, #050810 70%);
+  }
+
+  .menu-ticker {
+    position: absolute;
+    top: 0;
+    left: 0; right: 0;
+    background: var(--red);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 18s linear infinite;
+  }
+  @keyframes ticker {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .menu-logo {
+    font-family: var(--font-mono);
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 700;
+    color: var(--red);
+    text-shadow: 0 0 20px #ff3355aa, 0 0 60px #ff335544;
+    letter-spacing: -1px;
+    line-height: 1;
+    text-align: center;
+    margin-bottom: 6px;
+    animation: flicker 4s ease-in-out infinite;
+  }
+  @keyframes flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.85; }
+    98% { opacity: 1; }
+    99% { opacity: 0.9; }
+  }
+
+  .menu-sub {
+    font-family: var(--font-mono);
+    font-size: clamp(9px, 1.8vw, 13px);
+    color: var(--dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .menu-chart {
+    width: min(400px, 85vw);
+    height: 100px;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .menu-chart canvas { width: 100%; height: 100%; }
+
+  .menu-tagline {
+    font-size: clamp(12px, 2.5vw, 15px);
+    color: var(--gold);
+    text-align: center;
+    max-width: 380px;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+
+  .btn-play {
+    background: transparent;
+    border: 2px solid var(--red);
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 14px 48px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    box-shadow: 0 0 20px #ff335533, inset 0 0 20px #ff335510;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-play::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--red);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s;
+    z-index: -1;
+  }
+  .btn-play:hover { color: #fff; box-shadow: 0 0 40px #ff335566; }
+  .btn-play:hover::before { transform: scaleX(1); }
+  .btn-play:active { transform: scale(0.97); }
+
+  .menu-highscore {
+    margin-top: 18px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .menu-highscore span { color: var(--gold); }
+
+  .disclaimer {
+    position: absolute;
+    bottom: 12px;
+    font-size: 9px;
+    color: #2a3550;
+    text-align: center;
+    font-family: var(--font-mono);
+    max-width: 90%;
+    line-height: 1.4;
+  }
+
+  /* ===== GAME ===== */
+  #gameWrapper {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+  }
+  #gameWrapper.active { display: flex; }
+
+  #hud {
+    display: flex;
+    align-items: stretch;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .hud-cell {
+    background: var(--panel);
+    padding: 6px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .hud-label {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .hud-val {
+    font-family: var(--font-mono);
+    font-size: clamp(13px, 3vw, 18px);
+    font-weight: 700;
+    color: var(--green);
+    transition: color 0.3s;
+  }
+  .hud-val.red { color: var(--red); }
+  .hud-val.gold { color: var(--gold); }
+  .hud-val.cyan { color: var(--cyan); }
+
+  #canvasWrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #gameCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: none;
+  }
+
+  /* Commentary feed */
+  #commentary {
+    position: absolute;
+    bottom: 8px;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .comment-bubble {
+    background: rgba(10,15,30,0.92);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    font-size: clamp(9px, 2vw, 12px);
+    color: var(--gold);
+    font-style: italic;
+    padding: 5px 12px;
+    max-width: 90%;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.4s;
+    font-family: var(--font-mono);
+  }
+  .comment-bubble.show { opacity: 1; }
+
+  /* ===== GAME OVER ===== */
+  #gameOver {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(5,8,16,0.97);
+    z-index: 50;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+  }
+  #gameOver.active { display: flex; }
+
+  .go-title {
+    font-size: clamp(28px, 7vw, 56px);
+    font-weight: 700;
+    color: var(--red);
+    text-shadow: var(--glow-r);
+    letter-spacing: -1px;
+    text-align: center;
+  }
+  .go-subtitle {
+    font-size: clamp(10px, 2vw, 14px);
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .go-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    width: min(380px, 90vw);
+    margin-bottom: 20px;
+  }
+  .go-stat {
+    background: var(--panel);
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .go-stat-label { font-size: 9px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+  .go-stat-val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+  .go-epitaph {
+    font-size: clamp(11px, 2.2vw, 13px);
+    color: var(--gold);
+    font-style: italic;
+    text-align: center;
+    max-width: 380px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    padding: 0 16px;
+  }
+
+  .go-name-wrap {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .go-name-wrap input {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s;
+  }
+  .go-name-wrap input:focus { border-color: var(--cyan); }
+  .go-name-wrap button {
+    background: var(--green);
+    border: none;
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 16px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.15s;
+  }
+  .go-name-wrap button:hover { opacity: 0.85; }
+
+  .go-leaderboard {
+    width: min(380px, 90vw);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .lb-header {
+    background: var(--border);
+    padding: 6px 14px;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .lb-row {
+    display: flex;
+    padding: 7px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    align-items: center;
+    gap: 10px;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { color: var(--dim); width: 20px; font-size: 11px; }
+  .lb-name { flex: 1; color: var(--white); }
+  .lb-score { color: var(--gold); font-weight: 700; }
+  .lb-row.highlight { background: #0a1e0a; }
+  .lb-row.highlight .lb-name { color: var(--green); }
+
+  .btn-again {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 12px 36px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .btn-again:hover { background: var(--cyan); color: #000; }
+
+  .btn-menu-back {
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 6px;
+    text-decoration: underline;
+  }
+
+  /* PAUSE OVERLAY */
+  #pauseOverlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(5,8,16,0.85);
+    z-index: 40;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    flex-direction: column;
+    gap: 12px;
+  }
+  #pauseOverlay.active { display: flex; }
+  .pause-title { font-size: 32px; font-weight: 700; color: var(--cyan); text-shadow: var(--glow-c); letter-spacing: 2px; }
+  .pause-sub { font-size: 12px; color: var(--dim); letter-spacing: 3px; }
+
+  /* MULTIPLIER POPUP */
+  .multiplier-pop {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    pointer-events: none;
+    animation: popUp 1.2s ease-out forwards;
+    z-index: 30;
+    text-shadow: 0 0 10px currentColor;
+  }
+  @keyframes popUp {
+    0% { transform: translateY(0) scale(0.8); opacity: 1; }
+    60% { transform: translateY(-40px) scale(1.1); opacity: 1; }
+    100% { transform: translateY(-70px) scale(1); opacity: 0; }
+  }
+
+  /* PAUSE BTN */
+  #pauseBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    z-index: 20;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  #pauseBtn:hover { color: var(--white); }
+
+  /* COMBO METER */
+  #comboMeter {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    text-shadow: 0 0 8px var(--gold);
+  }
+  #comboMeter.show { opacity: 1; }
+
+  /* NEW HIGH SCORE FLASH */
+  #newHSFlash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(16px, 4vw, 28px);
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    text-align: center;
+    z-index: 25;
+    transition: opacity 0.5s;
+  }
+  #newHSFlash.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ===== MENU ===== -->
+<div id="menu">
+  <div class="menu-ticker">
+    <span class="ticker-inner">
+      &nbsp;&nbsp;&nbsp;⚠ BREAKING: NVDA -18% — "just a dip" says analyst who bought at ATH &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+      ARK INVEST: "this is actually bullish" — 47th time this year &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+      RETAIL TRADER adds to losing position — "averaging down, trust the process" &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+      FED CHAIR: "we see no recession" (recession already started) &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
+      WALL STREET RECOMMENDS: buying the dip on stocks that are still 80% overvalued &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+      CATHIE WOOD: "Tesla going to $2,000" (currently $47) &nbsp;&nbsp;&bull;&nbsp;&nbsp;
+    </span>
+  </div>
+  <div class="menu-logo">CATCHING<br>FALLING KNIVES</div>
+  <div class="menu-sub">A Wall Street Survival Simulator</div>
+  <div class="menu-chart"><canvas id="menuChart"></canvas></div>
+  <div class="menu-tagline">"They said never catch a falling knife.<br>They were right. Do it anyway."</div>
+  <button class="btn-play" id="startBtn">▶ BUY THE DIP</button>
+  <div class="menu-highscore">ALL-TIME HIGH: <span id="menuHS">0</span> &nbsp;│&nbsp; GLORY AWAITS</div>
+  <div class="disclaimer">PAST PERFORMANCE IS NOT INDICATIVE OF FUTURE RESULTS. THIS GAME IS NOT FINANCIAL ADVICE. CATCHING FALLING KNIVES IN REAL MARKETS WILL RESULT IN FINANCIAL RUIN, EMOTIONAL DAMAGE, AND UNCOMFORTABLE CONVERSATIONS WITH YOUR SPOUSE. NOT AFFILIATED WITH ANY BANK, HEDGE FUND, OR CULT. ALL LOSSES ARE YOUR OWN.</div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="gameWrapper">
+  <div id="hud">
+    <div class="hud-cell">
+      <div class="hud-label">P&L</div>
+      <div class="hud-val" id="hScore">$0</div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">DRAWDOWN</div>
+      <div class="hud-val red" id="hMissed">0/15</div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">CLOCK</div>
+      <div class="hud-val cyan" id="hTime">0s</div>
+    </div>
+    <div class="hud-cell">
+      <div class="hud-label">VOLATILITY</div>
+      <div class="hud-val gold" id="hSpeed">LOW</div>
+    </div>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="gameCanvas"></canvas>
+    <button id="pauseBtn">⏸ HALT</button>
+    <div id="comboMeter">🔥 COMBO ×<span id="comboNum">1</span></div>
+    <div id="commentary"><div class="comment-bubble" id="commentText"></div></div>
+    <div id="newHSFlash">🏆 NEW ATH!</div>
+  </div>
+
+  <div id="pauseOverlay">
+    <div class="pause-title">MARKET HALTED</div>
+    <div class="pause-sub">TAP TO RESUME TRADING</div>
+  </div>
+</div>
+
+<!-- ===== GAME OVER ===== -->
+<div id="gameOver">
+  <div class="go-title" id="goTitle">MARGIN CALL</div>
+  <div class="go-subtitle" id="goSub">YOUR FUND HAS BEEN LIQUIDATED</div>
+
+  <div class="go-stats">
+    <div class="go-stat">
+      <div class="go-stat-label">Final P&L</div>
+      <div class="go-stat-val" style="color:var(--gold)" id="goScore">$0</div>
+    </div>
+    <div class="go-stat">
+      <div class="go-stat-label">Knives Caught</div>
+      <div class="go-stat-val" style="color:var(--green)" id="goCaught">0</div>
+    </div>
+    <div class="go-stat">
+      <div class="go-stat-label">Knives Dropped</div>
+      <div class="go-stat-val" style="color:var(--red)" id="goMissed">0</div>
+    </div>
+    <div class="go-stat">
+      <div class="go-stat-label">Max Combo</div>
+      <div class="go-stat-val" style="color:var(--cyan)" id="goCombo">×1</div>
+    </div>
+  </div>
+
+  <div class="go-epitaph" id="goEpitaph">"The market can remain irrational longer than you can remain solvent." — Keynes (probably)</div>
+
+  <div class="go-name-wrap">
+    <input type="text" id="playerName" placeholder="YOUR FUND NAME" maxlength="16">
+    <button id="saveScore">SAVE</button>
+  </div>
+
+  <div class="go-leaderboard" id="leaderboard"></div>
+
+  <button class="btn-again" id="playAgain">▶ LEVER UP AGAIN</button>
+  <button class="btn-menu-back" id="backToMenu">← back to main</button>
+</div>
+
+<script>
+// ============================================================
+//  POLYFILLS — iOS Safari compat
+// ============================================================
+function roundRect(ctx, x, y, w, h, r) {
+  if (w < 2*r) r = w/2;
+  if (h < 2*r) r = h/2;
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+}
+
+// ============================================================
+//  GAME CONFIG
+// ============================================================
+const KNIVES = [
+  { emoji:'📉', label:'SPY',   pts:10,  penalty:8,   speed:1.0, size:38, rare:false },
+  { emoji:'🔪', label:'NVDA',  pts:25,  penalty:20,  speed:1.3, size:34, rare:false },
+  { emoji:'💊', label:'TSLA',  pts:40,  penalty:30,  speed:1.6, size:30, rare:false },
+  { emoji:'🌕', label:'COIN',  pts:15,  penalty:12,  speed:0.9, size:36, rare:false },
+  { emoji:'🦍', label:'GME',   pts:60,  penalty:50,  speed:2.0, size:28, rare:true  },
+  { emoji:'🐸', label:'PEPE',  pts:80,  penalty:0,   speed:2.4, size:26, rare:true  },
+  { emoji:'🚀', label:'ARKK',  pts:100, penalty:80,  speed:2.8, size:24, rare:true  },
+];
+const POWERUPS = [
+  { emoji:'📞', label:'MARGIN CALL',  effect:'bad',  size:32 }, // lose lives
+  { emoji:'🏦', label:'BAILOUT',      effect:'good', size:36 }, // gain lives
+  { emoji:'🤡', label:'CRAMER PICK',  effect:'bad2', size:34 }, // reverse controls briefly
+  { emoji:'💎', label:'DIAMOND HANDS',effect:'mult', size:36 }, // 2× multiplier
+  { emoji:'🦆', label:'DUCK',         effect:'life', size:30 }, // +1 life (rare joe homage)
+];
+
+const COMMENTS = {
+  catch: [
+    '"Strong hands. That's the alpha."',
+    '"Classic buy-the-dip execution."',
+    '"My boy Warren would be proud."',
+    '"YOLO confirmed profitable."',
+    '"That's what we call a conviction play."',
+    '"Catching knives? Bullish."',
+    '"Add to position. Trust the process."',
+    '"Sir, this is a Wendy\'s. But also, nice catch."',
+    '"Your therapist will hear about this."',
+    '"The fundamentals support this decision."',
+    '"Running it back. I like it."',
+    '"Risk/reward: yes."',
+  ],
+  miss: [
+    '"Unfortunate. Have you considered options?"',
+    '"The market has spoken. You have not."',
+    '"Another loss? BTFD harder."',
+    '"Margin expanding... in the wrong direction."',
+    '"Your Robinhood balance sends its condolences."',
+    '"Classic retail timing."',
+    '"Cramer would have caught that."',
+    '"Have you tried praying to the Fed?"',
+    '"Loss porn incoming."',
+    '"That one stings. Like a knife."',
+    '"Your risk manager has resigned."',
+  ],
+  rare: [
+    '"🚨 RARE KNIFE ALERT 🚨 This is your moment."',
+    '"Volatility spike. Apes together strong."',
+    '"Wall Street bets is watching."',
+    '"This trade will define your career."',
+    '"YOLO or FOMO — choose wisely."',
+  ],
+  combo: [
+    '"You\'re in the zone. Circuit breakers are worried."',
+    '"COMBO MODE: Your P&L has gone parabolic."',
+    '"Goldman Sachs would like your trading strategy."',
+    '"You\'re the algo now."',
+    '"This is what they mean by \'flow state\'."',
+  ],
+  gameover: [
+    '"The market can stay irrational longer than you can stay solvent." — Keynes',
+    '"Be fearful when others are greedy... you were greedy." — Buffett (adapted)',
+    '"In the short run, the market is a voting machine. You voted wrong." — Graham',
+    '"Rule #1: Don\'t lose money. Rule #2: See Rule #1." — Buffett (you ignored both)',
+    '"October is particularly dangerous. So is every other month." — Twain (paraphrased)',
+    '"The investor\'s chief problem is himself." — Graham (confirmed)',
+    '"Behind every stock is a company. You forgot that company." — Lynch',
+    '"Derivatives are weapons of mass destruction." — Buffett (re: your gameplay)',
+    '"I\'ve never bought stocks on leverage. Neither should you." — Literally everyone',
+    '"Risk management is for people who plan on surviving." — Nobody ever (apparently)',
+  ],
+};
+
+// ============================================================
+//  CORE STATE
+// ============================================================
+let state = 'menu';
+let score = 0, missed = 0, caught = 0, elapsed = 0;
+let combo = 1, maxCombo = 1;
+let lives = 15;
+let paused = false;
+let gameLoopId, timerInterval;
+let objects = [];
+let spawnTimer = 0;
+let spawnInterval = 110; // frames
+let frameCount = 0;
+let multiplier = 1;
+let multTimer = 0;
+let reverseTimer = 0;
+let lastSpeedLevel = 0;
+let commentTimeout;
+let prevHighScore = 0;
+
+// Paddle
+let paddleX = 0.5; // 0-1 normalised
+const PADDLE_W_FRAC = 0.22;
+const PADDLE_H = 16;
+
+// ============================================================
+//  CANVAS + RESIZE
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const wrap = document.getElementById('canvasWrap');
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+}
+window.addEventListener('resize', resize);
+
+// ============================================================
+//  INPUT
+// ============================================================
+let touchX = null;
+
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  paddleX = (e.clientX - r.left) / r.width;
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  touchX = (e.touches[0].clientX - r.left) / r.width;
+  paddleX = touchX;
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' || e.key === 'Escape') togglePause();
+});
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('pauseOverlay').addEventListener('click', togglePause);
+
+function togglePause() {
+  if (state !== 'playing') return;
+  paused = !paused;
+  document.getElementById('pauseOverlay').classList.toggle('active', paused);
+  if (!paused) requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  SPAWN
+// ============================================================
+function weightedRandom(arr, weightFn) {
+  const weights = arr.map(weightFn);
+  const total = weights.reduce((a,b)=>a+b,0);
+  let r = Math.random() * total;
+  for (let i=0;i<arr.length;i++) { r -= weights[i]; if (r<=0) return arr[i]; }
+  return arr[arr.length-1];
+}
+
+function getSpeedLevel() {
+  if (elapsed < 20) return 0;
+  if (elapsed < 45) return 1;
+  if (elapsed < 75) return 2;
+  if (elapsed < 110) return 3;
+  if (elapsed < 150) return 4;
+  return 5;
+}
+const speedLabels = ['LOW','MEDIUM','HIGH','EXTREME','INSANE','💀REKT'];
+
+function spawnObject() {
+  const sl = getSpeedLevel();
+  const baseSpeed = (1 + sl * 0.55) * (canvas.height / 420);
+
+  // Chance to spawn powerup
+  if (Math.random() < 0.08) {
+    const pu = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+    objects.push({
+      type: 'powerup',
+      data: pu,
+      x: 0.05 + Math.random() * 0.9,
+      y: -0.05,
+      vy: baseSpeed * 0.75,
+      rot: 0,
+      rotV: (Math.random()-0.5)*0.12,
+      wobble: Math.random()*Math.PI*2,
+    });
+    return;
+  }
+
+  // Knife
+  const knife = weightedRandom(KNIVES, k => k.rare ? 0.08 : 1);
+  objects.push({
+    type: 'knife',
+    data: knife,
+    x: 0.05 + Math.random() * 0.9,
+    y: -0.05,
+    vy: baseSpeed * knife.speed,
+    rot: 0,
+    rotV: (Math.random()-0.5)*0.15,
+    wobble: Math.random()*Math.PI*2,
+    label: knife.label,
+    rare: knife.rare,
+  });
+}
+
+// ============================================================
+//  COMMENT SYSTEM
+// ============================================================
+function showComment(pool) {
+  const arr = COMMENTS[pool];
+  const text = arr[Math.floor(Math.random()*arr.length)];
+  const el = document.getElementById('commentText');
+  clearTimeout(commentTimeout);
+  el.textContent = text;
+  el.classList.add('show');
+  commentTimeout = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+// ============================================================
+//  POPUP
+// ============================================================
+function spawnPopup(x, y, text, color) {
+  const wrap = document.getElementById('canvasWrap');
+  const el = document.createElement('div');
+  el.className = 'multiplier-pop';
+  el.textContent = text;
+  el.style.color = color;
+  el.style.left = (x * 100) + '%';
+  el.style.top = (y * 100) + '%';
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 1300);
+}
+
+// ============================================================
+//  HUD UPDATE
+// ============================================================
+function updateHUD() {
+  const sl = getSpeedLevel();
+  document.getElementById('hScore').textContent = '$' + score.toLocaleString();
+  document.getElementById('hScore').className = 'hud-val' + (score<0?' red':'');
+  document.getElementById('hMissed').textContent = missed + '/' + lives;
+  document.getElementById('hTime').textContent = elapsed + 's';
+  document.getElementById('hSpeed').textContent = speedLabels[sl] || '💀REKT';
+  
+  if (combo > 1) {
+    document.getElementById('comboMeter').classList.add('show');
+    document.getElementById('comboNum').textContent = combo;
+  } else {
+    document.getElementById('comboMeter').classList.remove('show');
+  }
+
+  // Speed level change alert
+  if (sl > lastSpeedLevel) {
+    lastSpeedLevel = sl;
+    const msgs = ['','📈 VOLATILITY RISING','⚡ HIGH VOL MODE','🔥 EXTREME VOL','💀 MARKET PANIC','☠️ BLACK MONDAY'];
+    if (msgs[sl]) spawnPopup(0.5, 0.3, msgs[sl], '#ffd700');
+  }
+}
+
+// ============================================================
+//  COLLISION
+// ============================================================
+function checkCatch(obj) {
+  const pw = PADDLE_W_FRAC * canvas.width * (multiplier > 1 ? 1.15 : 1);
+  const ph = PADDLE_H;
+  const px = paddleX * canvas.width;
+  const py = canvas.height - 40;
+
+  const ox = obj.x * canvas.width;
+  const oy = obj.y * canvas.height;
+
+  return Math.abs(ox - px) < (pw/2 + (obj.data.size||32)/2) &&
+         Math.abs(oy - py) < (ph/2 + (obj.data.size||32)/2 + 8);
+}
+
+// ============================================================
+//  APPLY POWERUP
+// ============================================================
+function applyPowerup(pu, caught) {
+  if (caught) {
+    if (pu.effect === 'good') {
+      missed = Math.max(0, missed - 3);
+      showComment('catch');
+      spawnPopup(paddleX, 0.8, '🏦 BAILOUT! -3 LOSSES', '#00ff88');
+    } else if (pu.effect === 'mult') {
+      multiplier = 2;
+      multTimer = 300;
+      spawnPopup(paddleX, 0.8, '💎 2× MULTIPLIER', '#ffd700');
+    } else if (pu.effect === 'life') {
+      missed = Math.max(0, missed - 1);
+      spawnPopup(paddleX, 0.8, '🦆 RESCUED! -1 LOSS', '#00d4ff');
+    } else if (pu.effect === 'bad') {
+      missed += 2;
+      spawnPopup(paddleX, 0.8, '📞 MARGIN CALL! +2 LOSSES', '#ff3355');
+    } else if (pu.effect === 'bad2') {
+      reverseTimer = 180;
+      spawnPopup(paddleX, 0.8, '🤡 CRAMER PICK! CONTROLS REVERSED', '#ff6600');
+    }
+  } else {
+    // missed powerup
+    if (pu.effect === 'good' || pu.effect === 'life') {
+      // missed bailout
+      spawnPopup(Math.random(), 0.5, 'BAILOUT MISSED 🤦', '#4a5568');
+    } else if (pu.effect === 'mult') {
+      spawnPopup(Math.random(), 0.5, 'MISSED 2× 💀', '#4a5568');
+    }
+  }
+}
+
+// ============================================================
+//  DRAW
+// ============================================================
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = '#0d1525';
+  ctx.lineWidth = 1;
+  const grid = 48;
+  for (let x=0;x<W;x+=grid) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y=0;y<H;y+=grid) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Danger zone line
+  ctx.strokeStyle = '#1a2540';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(0, H-50); ctx.lineTo(W, H-50); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Falling objects
+  for (const obj of objects) {
+    const ox = obj.x * W;
+    const oy = obj.y * H;
+    const sz = obj.data.size || 32;
+
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.rotate(obj.rot);
+
+    // Glow for rare items
+    if (obj.rare || (obj.type==='powerup' && obj.data.effect==='mult')) {
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = obj.rare ? '#ffd700' : '#00d4ff';
+    }
+
+    ctx.font = sz + 'px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(obj.data.emoji, 0, 0);
+
+    // Label
+    ctx.shadowBlur = 0;
+    ctx.font = '600 9px Courier New, monospace';
+    ctx.fillStyle = obj.rare ? '#ffd700' : (obj.type==='powerup' ? '#00d4ff' : '#4a6080');
+    ctx.fillText(obj.label || obj.data.label, 0, sz/2 + 9);
+
+    ctx.restore();
+  }
+
+  // Paddle
+  const pw = PADDLE_W_FRAC * W;
+  const px = paddleX * W;
+  const py = H - 40;
+
+  // Reverse indicator
+  if (reverseTimer > 0) {
+    ctx.strokeStyle = '#ff6600';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#ff6600';
+  } else if (multiplier > 1) {
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ffd700aa';
+  } else {
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = '#00ff8866';
+  }
+
+  // Paddle body
+  const pColor = reverseTimer>0 ? '#ff6600' : (multiplier>1 ? '#ffd700' : '#00ff88');
+  ctx.fillStyle = pColor + '18';
+  ctx.strokeStyle = pColor;
+  ctx.beginPath();
+  roundRect(ctx, px - pw/2, py - PADDLE_H/2, pw, PADDLE_H, 4);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Label on paddle
+  ctx.fillStyle = pColor + 'aa';
+  ctx.font = '600 9px Courier New, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(reverseTimer>0 ? '🤡 CRAMER' : (multiplier>1 ? '💎 ×2' : '📊 YOUR FUND'), px, py);
+
+  // Cursor glow dot
+  ctx.beginPath();
+  ctx.arc(px, py, 3, 0, Math.PI*2);
+  ctx.fillStyle = pColor;
+  ctx.fill();
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+function gameLoop() {
+  if (state !== 'playing' || paused) return;
+  frameCount++;
+
+  // Timers
+  if (multTimer > 0) { multTimer--; if (multTimer===0) { multiplier=1; } }
+  if (reverseTimer > 0) reverseTimer--;
+
+  // Spawn
+  spawnTimer++;
+  const sl = getSpeedLevel();
+  const si = Math.max(30, spawnInterval - sl*14);
+  if (spawnTimer >= si) {
+    spawnTimer = 0;
+    spawnObject();
+    // Sometimes spawn 2 at high speed
+    if (sl >= 3 && Math.random() < 0.3) spawnObject();
+    if (sl >= 5 && Math.random() < 0.2) spawnObject();
+  }
+
+  // Reverse paddle
+  if (reverseTimer > 0) {
+    // paddleX is controlled externally; reverse is visual effect only in draw
+    // Actually let's invert movement: store true position, draw inverted
+  }
+
+  // Update objects
+  const toRemove = [];
+  for (let i=0; i<objects.length; i++) {
+    const obj = objects[i];
+    obj.y += obj.vy / canvas.height;
+    obj.rot += obj.rotV;
+    obj.wobble += 0.08;
+
+    if (reverseTimer > 0) {
+      obj.x += Math.sin(obj.wobble) * 0.003;
+    }
+
+    // Check catch
+    if (checkCatch(obj)) {
+      toRemove.push(i);
+      if (obj.type === 'knife') {
+        const pts = Math.round(obj.data.pts * multiplier * (combo >= 5 ? 1.5 : 1));
+        score += pts;
+        caught++;
+        combo++;
+        maxCombo = Math.max(maxCombo, combo);
+        if (obj.rare) showComment('rare');
+        else if (combo >= 5 && frameCount % 5 === 0) showComment('combo');
+        else if (Math.random() < 0.35) showComment('catch');
+        spawnPopup(obj.x, obj.y, (pts>0?'+':'') + '$' + pts + (obj.rare?' 🔥':''), obj.rare?'#ffd700':'#00ff88');
+        if (score > prevHighScore) {
+          document.getElementById('newHSFlash').classList.add('show');
+          setTimeout(()=>document.getElementById('newHSFlash').classList.remove('show'),1500);
+        }
+      } else {
+        applyPowerup(obj.data, true);
+      }
+    } else if (obj.y > 1.08) {
+      toRemove.push(i);
+      if (obj.type === 'knife') {
+        const pen = obj.data.penalty;
+        score -= pen;
+        missed++;
+        combo = 1;
+        if (Math.random() < 0.5) showComment('miss');
+        spawnPopup(obj.x, 0.9, '-$' + pen + ' 💀', '#ff3355');
+        // Flash HUD
+        document.getElementById('hMissed').style.textShadow = '0 0 20px #ff3355';
+        setTimeout(()=>document.getElementById('hMissed').style.textShadow='',400);
+      } else {
+        applyPowerup(obj.data, false);
+      }
+    }
+  }
+
+  // Remove caught/missed (reverse order)
+  for (let i = toRemove.length-1; i>=0; i--) objects.splice(toRemove[i],1);
+
+  // Check game over
+  if (missed >= lives) {
+    endGame();
+    return;
+  }
+
+  updateHUD();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  TIMER
+// ============================================================
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{ if (!paused) elapsed++; }, 1000);
+}
+
+// ============================================================
+//  START / END
+// ============================================================
+function startGame() {
+  prevHighScore = getHighScore();
+  score = 0; missed = 0; caught = 0; elapsed = 0;
+  combo = 1; maxCombo = 1;
+  lives = 15;
+  multiplier = 1; multTimer = 0; reverseTimer = 0;
+  objects = []; spawnTimer = 0; frameCount = 0; lastSpeedLevel = 0;
+  paused = false;
+
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('gameWrapper').classList.add('active');
+  document.getElementById('pauseOverlay').classList.remove('active');
+  document.getElementById('newHSFlash').classList.remove('show');
+
+  state = 'playing';
+  resize();
+  startTimer();
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  state = 'gameover';
+  clearInterval(timerInterval);
+
+  // Pick outcome
+  const ratio = caught / Math.max(1, caught + missed);
+  let title, sub;
+  if (score >= 5000)       { title='LEGENDARY FUND'; sub='WARREN BUFFETT HAS NOTICED YOU'; }
+  else if (score >= 2500)  { title='STRONG ALPHA'; sub='YOUR LP\'S ARE IMPRESSED'; }
+  else if (score >= 1000)  { title='DECENT RETURN'; sub='BETTER THAN BONDS, BARELY'; }
+  else if (score >= 0)     { title='FLAT BOOK'; sub='YOU SURVIVED. THAT\'S SOMETHING.'; }
+  else if (score >= -500)  { title='DRAWDOWN'; sub='THE RISK COMMITTEE IS UNHAPPY'; }
+  else                     { title='MARGIN CALL'; sub='YOUR FUND HAS BEEN LIQUIDATED'; }
+
+  document.getElementById('goTitle').textContent = title;
+  document.getElementById('goSub').textContent = sub;
+  document.getElementById('goScore').textContent = '$' + score.toLocaleString();
+  document.getElementById('goCaught').textContent = caught;
+  document.getElementById('goMissed').textContent = missed;
+  document.getElementById('goCombo').textContent = '×' + maxCombo;
+
+  const epitaphs = COMMENTS.gameover;
+  document.getElementById('goEpitaph').textContent = epitaphs[Math.floor(Math.random()*epitaphs.length)];
+
+  renderLeaderboard();
+  document.getElementById('gameWrapper').classList.remove('active');
+  document.getElementById('gameOver').classList.add('active');
+}
+
+// ============================================================
+//  LEADERBOARD (localStorage)
+// ============================================================
+function getLeaderboard() {
+  try { return JSON.parse(localStorage.getItem('cfk_lb') || '[]'); } catch { return []; }
+}
+function saveLeaderboard(lb) {
+  try { localStorage.setItem('cfk_lb', JSON.stringify(lb)); } catch {}
+}
+function getHighScore() {
+  const lb = getLeaderboard();
+  return lb.length ? lb[0].score : 0;
+}
+function addScore(name, sc) {
+  const lb = getLeaderboard();
+  lb.push({ name: name.toUpperCase() || 'ANON FUND', score: sc, time: elapsed, combo: maxCombo });
+  lb.sort((a,b)=>b.score-a.score);
+  saveLeaderboard(lb.slice(0,10));
+  return lb;
+}
+function renderLeaderboard(highlight=-1) {
+  const lb = getLeaderboard();
+  const el = document.getElementById('leaderboard');
+  if (!lb.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = '<div class="lb-header">📊 HALL OF GAINS — TOP 10</div>' +
+    lb.slice(0,8).map((e,i)=>
+      `<div class="lb-row${i===highlight?' highlight':''}">
+        <span class="lb-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span>
+        <span class="lb-name">${e.name}</span>
+        <span class="lb-score">$${e.score.toLocaleString()}</span>
+      </div>`
+    ).join('');
+}
+
+document.getElementById('saveScore').addEventListener('click', () => {
+  const name = document.getElementById('playerName').value.trim() || 'ANON FUND';
+  addScore(name, score);
+  const lb = getLeaderboard();
+  const idx = lb.findIndex(e=>e.name===name.toUpperCase() && e.score===score);
+  renderLeaderboard(idx);
+  document.getElementById('saveScore').textContent = '✓ SAVED';
+  document.getElementById('saveScore').disabled = true;
+});
+
+document.getElementById('menuHS').textContent = getHighScore().toLocaleString();
+
+// ============================================================
+//  MENU CHART (fake crash chart)
+// ============================================================
+function drawMenuChart() {
+  const c = document.getElementById('menuChart');
+  const ctx2 = c.getContext('2d');
+  // Use explicit pixel size — offsetWidth is 0 on iOS before first paint
+  const W = Math.min(400, window.innerWidth * 0.85);
+  const H = 100;
+  const dpr = window.devicePixelRatio || 1;
+  c.width = W * dpr;
+  c.height = H * dpr;
+  c.style.width = W + 'px';
+  c.style.height = H + 'px';
+  ctx2.scale(dpr, dpr);
+
+  // Generate dramatic chart
+  const pts = [];
+  let v = H * 0.25;
+  for (let i=0;i<80;i++) {
+    v += (Math.random()-0.45)*8;
+    if (i > 55) v += 6 + Math.random()*5; // crash
+    v = Math.max(H*0.1, Math.min(H*0.9, v));
+    pts.push(v);
+  }
+
+  // Gradient fill
+  const grad = ctx2.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#ff335522');
+  grad.addColorStop(1,'transparent');
+
+  ctx2.beginPath();
+  ctx2.moveTo(0, pts[0]);
+  for (let i=1;i<pts.length;i++) ctx2.lineTo((i/(pts.length-1))*W, pts[i]);
+  ctx2.lineTo(W, H); ctx2.lineTo(0, H); ctx2.closePath();
+  ctx2.fillStyle = grad;
+  ctx2.fill();
+
+  ctx2.beginPath();
+  ctx2.moveTo(0, pts[0]);
+  for (let i=1;i<pts.length;i++) ctx2.lineTo((i/(pts.length-1))*W, pts[i]);
+  ctx2.strokeStyle = '#ff3355';
+  ctx2.lineWidth = 2;
+  ctx2.shadowBlur = 8;
+  ctx2.shadowColor = '#ff3355';
+  ctx2.stroke();
+
+  // "YOU ARE HERE" arrow
+  ctx2.fillStyle = '#ff3355';
+  ctx2.font = '600 9px Courier New, monospace';
+  ctx2.textAlign = 'right';
+  ctx2.fillText('YOU ARE HERE →', W-4, pts[pts.length-1] - 8);
+}
+
+// ============================================================
+//  BUTTONS
+// ============================================================
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('playAgain').addEventListener('click', () => {
+  document.getElementById('saveScore').textContent = 'SAVE';
+  document.getElementById('saveScore').disabled = false;
+  document.getElementById('playerName').value = '';
+  startGame();
+});
+document.getElementById('backToMenu').addEventListener('click', () => {
+  document.getElementById('gameOver').classList.remove('active');
+  document.getElementById('gameWrapper').classList.remove('active');
+  document.getElementById('menu').style.display = 'flex';
+  document.getElementById('menuHS').textContent = getHighScore().toLocaleString();
+  state = 'menu';
+});
+
+// Init — defer to load so iOS has finished layout
+window.addEventListener('load', () => {
+  drawMenuChart();
+  document.getElementById('menu').style.display = 'flex';
+});
+
+</script>
+</body>
+</html>
