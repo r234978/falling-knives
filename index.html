@@ -722,55 +722,129 @@ function endGame(){
   document.getElementById('go-combo').textContent='×'+maxCombo;
   document.getElementById('epitaph').textContent=rnd(COMMENTS.over);
 
-  renderLB();
+  loadAndRenderLB();
   document.getElementById('gameover').classList.add('active');
 }
 
-// ── LEADERBOARD ──────────────────────────────────────────────
-function getLB(){ try{return JSON.parse(localStorage.getItem('cfk2')||'[]');}catch{return[];} }
-function saveLB(lb){ try{localStorage.setItem('cfk2',JSON.stringify(lb));}catch{} }
-function getHS(){ const lb=getLB(); return lb.length?lb[0].score:0; }
-function addToLB(name,sc){
-  const lb=getLB();
-  lb.push({name:name.toUpperCase()||'ANON FUND',score:sc});
-  lb.sort((a,b)=>b.score-a.score);
-  saveLB(lb.slice(0,10));
-  return lb;
+// ── GLOBAL LEADERBOARD (Firebase Realtime Database) ─────────
+const FB = 'https://falling-knives-cf40c-default-rtdb.europe-west1.firebasedatabase.app';
+let globalLB = [];
+let myEntryKey = null;
+
+function getLocalHS(){
+  try{ return parseInt(localStorage.getItem('cfk_hs')||'0'); }catch{ return 0; }
 }
-function renderLB(hi=-1){
-  const lb=getLB();
-  const el=document.getElementById('lb');
-  if(!lb.length){el.style.display='none';return;}
+function setLocalHS(s){
+  try{ localStorage.setItem('cfk_hs', s); }catch{}
+}
+
+async function fetchLB(){
+  try{
+    const r = await fetch(FB+'/scores.json?orderBy="score"&limitToLast=20');
+    const data = await r.json();
+    if(!data){ globalLB=[]; return; }
+    globalLB = Object.entries(data)
+      .map(([k,v])=>({key:k,...v}))
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,10);
+  } catch(e){ globalLB=[]; }
+}
+
+async function submitScore(name, sc){
+  const entry = {
+    name: name.toUpperCase().trim() || 'ANON FUND',
+    score: sc,
+    time: elapsed,
+    combo: maxCombo,
+    ts: Date.now()
+  };
+  try{
+    const r = await fetch(FB+'/scores.json', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(entry)
+    });
+    const data = await r.json();
+    myEntryKey = data.name;
+    // prune to top 100 (fire-and-forget)
+    pruneOldScores();
+  } catch(e){ console.log('Submit failed',e); }
+  // also update local HS
+  if(sc > getLocalHS()) setLocalHS(sc);
+}
+
+async function pruneOldScores(){
+  // keep only top 100 — fetch all, delete lowest if >100
+  try{
+    const r = await fetch(FB+'/scores.json');
+    const data = await r.json();
+    if(!data) return;
+    const all = Object.entries(data).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.score-a.score);
+    if(all.length > 100){
+      const toDelete = all.slice(100);
+      await Promise.all(toDelete.map(e=>fetch(FB+'/scores/'+e.key+'.json',{method:'DELETE'})));
+    }
+  }catch(e){}
+}
+
+function renderLB(myName=''){
+  const el = document.getElementById('lb');
+  if(!globalLB.length){
+    el.innerHTML='<div class="lb-hdr">🌍 GLOBAL LEADERBOARD</div><div class="lb-row" style="justify-content:center;color:#4a5568">No scores yet — be first!</div>';
+    el.style.display='block';
+    return;
+  }
   el.style.display='block';
-  el.innerHTML='<div class="lb-hdr">📊 HALL OF GAINS</div>'+
-    lb.slice(0,8).map((e,i)=>
-      `<div class="lb-row${i===hi?' me':''}">
+  const myNameUp = myName.toUpperCase().trim() || 'ANON FUND';
+  el.innerHTML='<div class="lb-hdr">🌍 GLOBAL LEADERBOARD — TOP 10</div>'+
+    globalLB.map((e,i)=>{
+      const isMe = e.name===myNameUp && e.score===score;
+      return `<div class="lb-row${isMe?' me':''}">
         <span class="lb-rank">${['🥇','🥈','🥉'][i]||'#'+(i+1)}</span>
         <span class="lb-name">${e.name}</span>
         <span class="lb-score">$${e.score.toLocaleString()}</span>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
 }
 
-document.getElementById('save-btn').addEventListener('click',()=>{
-  const name=document.getElementById('player-name').value.trim()||'ANON FUND';
-  const lb=addToLB(name,score);
-  const hi=lb.findIndex(e=>e.name===name.toUpperCase()&&e.score===score);
-  renderLB(hi);
-  document.getElementById('save-btn').textContent='✓';
-  document.getElementById('save-btn').disabled=true;
+async function loadAndRenderLB(myName=''){
+  const el = document.getElementById('lb');
+  el.style.display='block';
+  el.innerHTML='<div class="lb-hdr">🌍 GLOBAL LEADERBOARD</div><div class="lb-row" style="justify-content:center;color:#4a5568">Loading...</div>';
+  await fetchLB();
+  renderLB(myName);
+}
+
+document.getElementById('save-btn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('save-btn');
+  const name = document.getElementById('player-name').value.trim()||'ANON FUND';
+  btn.textContent='SAVING...';
+  btn.disabled=true;
+  await submitScore(name, score);
+  await fetchLB();
+  renderLB(name);
+  btn.textContent='✓ SAVED';
 });
 document.getElementById('start-btn').addEventListener('click',startGame);
 document.getElementById('again-btn').addEventListener('click',startGame);
 document.getElementById('menu-btn').addEventListener('click',()=>{
   document.getElementById('gameover').classList.remove('active');
   document.getElementById('menu').classList.add('active');
-  document.getElementById('menu-hs').textContent=getHS().toLocaleString();
+  refreshMenuHS();
 });
 
 // ── INIT ─────────────────────────────────────────────────────
 buildChart();
-document.getElementById('menu-hs').textContent=getHS().toLocaleString();
+document.getElementById('menu-hs').textContent=getLocalHS().toLocaleString();
+
+// on menu show, refresh HS from firebase
+async function refreshMenuHS(){
+  await fetchLB();
+  if(globalLB.length){
+    document.getElementById('menu-hs').textContent=globalLB[0].score.toLocaleString();
+  }
+}
+refreshMenuHS();
 </script>
 </body>
 </html>
