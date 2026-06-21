@@ -2,1293 +2,774 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>💀 Catching Falling Knives</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Catching Falling Knives</title>
 <style>
-  :root {
-    --font-mono: 'Courier New', 'Menlo', 'Monaco', 'Consolas', monospace;
-    --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-    --bg: #050810;
-    --panel: #0a0f1e;
-    --border: #1a2540;
-    --green: #00ff88;
-    --red: #ff3355;
-    --gold: #ffd700;
-    --cyan: #00d4ff;
-    --orange: #ff6600;
-    --white: #e8eaf0;
-    --dim: #4a5568;
-    --glow-g: 0 0 10px #00ff8866, 0 0 30px #00ff8833;
-    --glow-r: 0 0 10px #ff335566, 0 0 30px #ff335533;
-    --glow-c: 0 0 10px #00d4ff66, 0 0 30px #00d4ff33;
-  }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background:#050810;
+  color:#e8eaf0;
+  font-family: 'Courier New', Courier, monospace;
+  overflow:hidden;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
 
-  body {
-    background: var(--bg);
-    color: var(--white);
-    font-family: var(--font-ui);
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-  }
+/* ── SCREENS ── */
+.screen { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; }
+.screen.active { display:flex; }
 
-  /* SCANLINES OVERLAY */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-    pointer-events: none;
-    z-index: 999;
-  }
+/* ── TICKER ── */
+#ticker {
+  position:fixed; top:0; left:0; right:0; z-index:999;
+  background:#cc1133; color:#fff;
+  font-size:11px; font-weight:700;
+  padding:5px 0; overflow:hidden; white-space:nowrap;
+}
+.tick-inner { display:inline-block; animation: tick 22s linear infinite; padding-left:100%; }
+@keyframes tick { from{transform:translateX(0)} to{transform:translateX(-100%)} }
 
-  /* ===== MENU ===== */
-  #menu {
-    position: absolute;
-    inset: 0;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    background: radial-gradient(ellipse at center, #0a1428 0%, #050810 70%);
-  }
+/* ── MENU ── */
+#menu {
+  background: radial-gradient(ellipse at 50% 40%, #0d1e3a 0%, #050810 65%);
+}
+.logo {
+  font-size: clamp(32px,9vw,58px);
+  font-weight:900;
+  color:#ff3355;
+  text-shadow:0 0 30px #ff335588;
+  text-align:center;
+  line-height:1.05;
+  letter-spacing:-1px;
+  margin-bottom:6px;
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{text-shadow:0 0 30px #ff335588} 50%{text-shadow:0 0 60px #ff3355cc, 0 0 100px #ff335544} }
 
-  .menu-ticker {
-    position: absolute;
-    top: 0;
-    left: 0; right: 0;
-    background: var(--red);
-    color: #fff;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-  .ticker-inner {
-    display: inline-block;
-    animation: ticker 18s linear infinite;
-  }
-  @keyframes ticker {
-    0% { transform: translateX(100vw); }
-    100% { transform: translateX(-100%); }
-  }
+.subtitle { font-size:clamp(9px,2.5vw,13px); color:#4a5568; letter-spacing:4px; text-transform:uppercase; margin-bottom:28px; }
 
-  .menu-logo {
-    font-family: var(--font-mono);
-    font-size: clamp(28px, 6vw, 52px);
-    font-weight: 700;
-    color: var(--red);
-    text-shadow: 0 0 20px #ff3355aa, 0 0 60px #ff335544;
-    letter-spacing: -1px;
-    line-height: 1;
-    text-align: center;
-    margin-bottom: 6px;
-    animation: flicker 4s ease-in-out infinite;
-  }
-  @keyframes flicker {
-    0%, 96%, 100% { opacity: 1; }
-    97% { opacity: 0.85; }
-    98% { opacity: 1; }
-    99% { opacity: 0.9; }
-  }
+.fake-chart {
+  width:min(360px,85vw); height:90px;
+  position:relative; margin-bottom:22px;
+  border-bottom:1px solid #1a2540;
+}
+.chart-line {
+  position:absolute; inset:0;
+  background: linear-gradient(135deg, transparent 0%, #ff335508 100%);
+}
+.chart-svg { width:100%; height:100%; }
 
-  .menu-sub {
-    font-family: var(--font-mono);
-    font-size: clamp(9px, 1.8vw, 13px);
-    color: var(--dim);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 32px;
-  }
+.tagline { font-size:clamp(11px,3vw,14px); color:#ffd700; font-style:italic; text-align:center; margin-bottom:28px; max-width:320px; line-height:1.6; padding:0 16px; }
 
-  .menu-chart {
-    width: min(400px, 85vw);
-    height: 100px;
-    margin-bottom: 28px;
-    position: relative;
-  }
-  .menu-chart canvas { width: 100%; height: 100%; }
+.btn {
+  background:transparent; border:2px solid #ff3355; color:#ff3355;
+  font-family:'Courier New',monospace; font-size:clamp(13px,3.5vw,16px); font-weight:700;
+  letter-spacing:3px; padding:14px 44px; cursor:pointer;
+  text-transform:uppercase; transition:all 0.15s;
+  box-shadow:0 0 20px #ff335530;
+}
+.btn:active { background:#ff3355; color:#fff; transform:scale(0.97); }
 
-  .menu-tagline {
-    font-size: clamp(12px, 2.5vw, 15px);
-    color: var(--gold);
-    text-align: center;
-    max-width: 380px;
-    line-height: 1.5;
-    margin-bottom: 28px;
-    font-style: italic;
-  }
+.hs-line { margin-top:16px; font-size:11px; color:#4a5568; }
+.hs-line span { color:#ffd700; }
 
-  .btn-play {
-    background: transparent;
-    border: 2px solid var(--red);
-    color: var(--red);
-    font-family: var(--font-mono);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 3px;
-    padding: 14px 48px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-    box-shadow: 0 0 20px #ff335533, inset 0 0 20px #ff335510;
-    position: relative;
-    overflow: hidden;
-  }
-  .btn-play::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--red);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.2s;
-    z-index: -1;
-  }
-  .btn-play:hover { color: #fff; box-shadow: 0 0 40px #ff335566; }
-  .btn-play:hover::before { transform: scaleX(1); }
-  .btn-play:active { transform: scale(0.97); }
+.legal { position:fixed; bottom:8px; font-size:8px; color:#1a2540; text-align:center; line-height:1.5; max-width:90vw; }
 
-  .menu-highscore {
-    margin-top: 18px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--dim);
-  }
-  .menu-highscore span { color: var(--gold); }
+/* ── HUD ── */
+#hud {
+  position:fixed; top:0; left:0; right:0; z-index:10;
+  display:none; flex-direction:row;
+  background:#0a0f1e; border-bottom:1px solid #1a2540;
+}
+#hud.active { display:flex; }
+.hud-cell { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 4px; border-right:1px solid #1a2540; }
+.hud-cell:last-child { border-right:none; }
+.hud-lbl { font-size:7px; color:#4a5568; letter-spacing:2px; text-transform:uppercase; }
+.hud-val { font-size:clamp(12px,3.5vw,17px); font-weight:700; margin-top:1px; }
+.green { color:#00ff88; } .red { color:#ff3355; } .gold { color:#ffd700; } .cyan { color:#00d4ff; }
 
-  .disclaimer {
-    position: absolute;
-    bottom: 12px;
-    font-size: 9px;
-    color: #2a3550;
-    text-align: center;
-    font-family: var(--font-mono);
-    max-width: 90%;
-    line-height: 1.4;
-  }
+/* ── GAME AREA ── */
+#game-area {
+  position:fixed; inset:0; top:52px;
+  overflow:hidden; display:none;
+  background:#050810;
+  cursor:none;
+}
+#game-area.active { display:block; }
 
-  /* ===== GAME ===== */
-  #gameWrapper {
-    display: none;
-    position: absolute;
-    inset: 0;
-    flex-direction: column;
-  }
-  #gameWrapper.active { display: flex; }
+/* Grid bg */
+#game-area::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image: linear-gradient(#0d1525 1px,transparent 1px), linear-gradient(90deg,#0d1525 1px,transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+}
 
-  #hud {
-    display: flex;
-    align-items: stretch;
-    gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+/* Falling objects */
+.obj {
+  position:absolute;
+  font-size:32px;
+  line-height:1;
+  text-align:center;
+  pointer-events:none;
+  transition:none;
+  will-change:transform;
+}
+.obj-label {
+  display:block;
+  font-size:8px;
+  color:#4a6080;
+  font-family:'Courier New',monospace;
+  margin-top:2px;
+  text-align:center;
+}
+.obj.rare .obj-label { color:#ffd700; }
+.obj.powerup .obj-label { color:#00d4ff; }
 
-  .hud-cell {
-    background: var(--panel);
-    padding: 6px 12px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .hud-label {
-    font-family: var(--font-mono);
-    font-size: 8px;
-    color: var(--dim);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
-  .hud-val {
-    font-family: var(--font-mono);
-    font-size: clamp(13px, 3vw, 18px);
-    font-weight: 700;
-    color: var(--green);
-    transition: color 0.3s;
-  }
-  .hud-val.red { color: var(--red); }
-  .hud-val.gold { color: var(--gold); }
-  .hud-val.cyan { color: var(--cyan); }
+/* Paddle */
+#paddle {
+  position:absolute;
+  bottom:36px;
+  height:14px;
+  background:rgba(0,255,136,0.12);
+  border:2px solid #00ff88;
+  border-radius:4px;
+  transform:translateX(-50%);
+  box-shadow:0 0 16px #00ff8844;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+#paddle.reverse { border-color:#ff6600; box-shadow:0 0 16px #ff660044; background:rgba(255,102,0,0.12); }
+#paddle.multi   { border-color:#ffd700; box-shadow:0 0 20px #ffd70066; background:rgba(255,215,0,0.12); }
+#paddle-label {
+  font-size:8px; color:#00ff8888;
+  font-family:'Courier New',monospace; pointer-events:none;
+  white-space:nowrap;
+}
 
-  #canvasWrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-  #gameCanvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    cursor: none;
-  }
+/* Danger line */
+#danger-line {
+  position:absolute; bottom:50px; left:0; right:0;
+  border-top:1px dashed #1a2540;
+  pointer-events:none;
+}
 
-  /* Commentary feed */
-  #commentary {
-    position: absolute;
-    bottom: 8px;
-    left: 0; right: 0;
-    display: flex;
-    justify-content: center;
-    pointer-events: none;
-  }
-  .comment-bubble {
-    background: rgba(10,15,30,0.92);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--gold);
-    font-size: clamp(9px, 2vw, 12px);
-    color: var(--gold);
-    font-style: italic;
-    padding: 5px 12px;
-    max-width: 90%;
-    text-align: center;
-    opacity: 0;
-    transition: opacity 0.4s;
-    font-family: var(--font-mono);
-  }
-  .comment-bubble.show { opacity: 1; }
+/* Commentary */
+#commentary {
+  position:absolute; bottom:8px; left:0; right:0;
+  display:flex; justify-content:center;
+  pointer-events:none; z-index:5;
+}
+#comment-text {
+  background:rgba(10,15,30,0.9); border:1px solid #1a2540;
+  border-left:3px solid #ffd700;
+  font-size:clamp(9px,2.5vw,11px); color:#ffd700; font-style:italic;
+  padding:5px 12px; max-width:90vw; text-align:center;
+  font-family:'Courier New',monospace;
+  opacity:0; transition:opacity 0.3s;
+}
+#comment-text.show { opacity:1; }
 
-  /* ===== GAME OVER ===== */
-  #gameOver {
-    display: none;
-    position: absolute;
-    inset: 0;
-    background: rgba(5,8,16,0.97);
-    z-index: 50;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-  #gameOver.active { display: flex; }
+/* Combo */
+#combo-meter {
+  position:absolute; top:8px; left:8px;
+  font-size:11px; color:#ffd700;
+  font-family:'Courier New',monospace;
+  pointer-events:none; opacity:0;
+  text-shadow:0 0 8px #ffd700;
+  transition:opacity 0.3s; z-index:5;
+}
+#combo-meter.show { opacity:1; }
 
-  .go-title {
-    font-size: clamp(28px, 7vw, 56px);
-    font-weight: 700;
-    color: var(--red);
-    text-shadow: var(--glow-r);
-    letter-spacing: -1px;
-    text-align: center;
-  }
-  .go-subtitle {
-    font-size: clamp(10px, 2vw, 14px);
-    color: var(--dim);
-    letter-spacing: 2px;
-    margin-bottom: 24px;
-    text-align: center;
-  }
+/* Popup floaters */
+.popup {
+  position:absolute; font-family:'Courier New',monospace;
+  font-weight:700; font-size:13px; pointer-events:none;
+  animation:floatUp 1.1s ease-out forwards;
+  text-shadow:0 0 8px currentColor; z-index:20;
+  white-space:nowrap;
+}
+@keyframes floatUp {
+  0%   { transform:translateY(0) scale(0.9); opacity:1; }
+  60%  { transform:translateY(-45px) scale(1.1); opacity:1; }
+  100% { transform:translateY(-80px); opacity:0; }
+}
 
-  .go-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    width: min(380px, 90vw);
-    margin-bottom: 20px;
-  }
-  .go-stat {
-    background: var(--panel);
-    padding: 10px 16px;
-    display: flex;
-    flex-direction: column;
-  }
-  .go-stat-label { font-size: 9px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
-  .go-stat-val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+/* Pause overlay */
+#pause-overlay {
+  position:fixed; inset:0; top:52px;
+  background:rgba(5,8,16,0.88);
+  display:none; align-items:center; justify-content:center;
+  flex-direction:column; gap:10px; z-index:30;
+}
+#pause-overlay.active { display:flex; }
+#pause-overlay h2 { font-size:28px; color:#00d4ff; letter-spacing:3px; text-shadow:0 0 20px #00d4ff88; }
+#pause-overlay p  { font-size:11px; color:#4a5568; letter-spacing:3px; }
 
-  .go-epitaph {
-    font-size: clamp(11px, 2.2vw, 13px);
-    color: var(--gold);
-    font-style: italic;
-    text-align: center;
-    max-width: 380px;
-    line-height: 1.6;
-    margin-bottom: 24px;
-    padding: 0 16px;
-  }
+/* ── GAME OVER ── */
+#gameover {
+  background:#050810;
+  overflow-y:auto;
+  padding:20px 0;
+}
+.go-title { font-size:clamp(24px,8vw,46px); font-weight:900; color:#ff3355; text-shadow:0 0 20px #ff335566; text-align:center; }
+.go-sub   { font-size:clamp(9px,2.5vw,12px); color:#4a5568; letter-spacing:3px; text-transform:uppercase; margin-bottom:18px; text-align:center; }
 
-  .go-name-wrap {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .go-name-wrap input {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--white);
-    font-family: var(--font-mono);
-    font-size: 14px;
-    padding: 10px 14px;
-    outline: none;
-    width: 200px;
-    transition: border-color 0.2s;
-  }
-  .go-name-wrap input:focus { border-color: var(--cyan); }
-  .go-name-wrap button {
-    background: var(--green);
-    border: none;
-    color: #000;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 16px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    transition: opacity 0.15s;
-  }
-  .go-name-wrap button:hover { opacity: 0.85; }
+.go-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#1a2540; border:1px solid #1a2540; width:min(360px,90vw); margin-bottom:16px; }
+.go-cell { background:#0a0f1e; padding:10px 14px; }
+.go-cell-lbl { font-size:8px; color:#4a5568; letter-spacing:2px; text-transform:uppercase; }
+.go-cell-val { font-size:clamp(16px,5vw,22px); font-weight:700; margin-top:2px; }
 
-  .go-leaderboard {
-    width: min(380px, 90vw);
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-    overflow: hidden;
-  }
-  .lb-header {
-    background: var(--border);
-    padding: 6px 14px;
-    font-size: 9px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--dim);
-  }
-  .lb-row {
-    display: flex;
-    padding: 7px 14px;
-    font-size: 13px;
-    border-bottom: 1px solid var(--border);
-    background: var(--panel);
-    align-items: center;
-    gap: 10px;
-  }
-  .lb-row:last-child { border-bottom: none; }
-  .lb-rank { color: var(--dim); width: 20px; font-size: 11px; }
-  .lb-name { flex: 1; color: var(--white); }
-  .lb-score { color: var(--gold); font-weight: 700; }
-  .lb-row.highlight { background: #0a1e0a; }
-  .lb-row.highlight .lb-name { color: var(--green); }
+.epitaph { font-size:clamp(10px,2.5vw,12px); color:#ffd700; font-style:italic; text-align:center; max-width:340px; line-height:1.7; margin-bottom:18px; padding:0 16px; }
 
-  .btn-again {
-    background: transparent;
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    padding: 12px 36px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  .btn-again:hover { background: var(--cyan); color: #000; }
+.name-row { display:flex; gap:8px; margin-bottom:14px; }
+.name-row input {
+  background:#0a0f1e; border:1px solid #1a2540; color:#e8eaf0;
+  font-family:'Courier New',monospace; font-size:13px;
+  padding:9px 12px; outline:none; width:190px;
+  -webkit-appearance:none;
+}
+.name-row input:focus { border-color:#00d4ff; }
+.name-row button {
+  background:#00ff88; border:none; color:#000;
+  font-family:'Courier New',monospace; font-size:11px; font-weight:700;
+  padding:9px 14px; cursor:pointer; letter-spacing:1px;
+}
 
-  .btn-menu-back {
-    background: transparent;
-    border: none;
-    color: var(--dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-    padding: 6px;
-    text-decoration: underline;
-  }
+.lb { width:min(360px,90vw); border:1px solid #1a2540; margin-bottom:16px; }
+.lb-hdr { background:#1a2540; padding:6px 14px; font-size:8px; letter-spacing:3px; color:#4a5568; text-transform:uppercase; }
+.lb-row { display:flex; padding:7px 14px; font-size:12px; border-bottom:1px solid #1a2540; background:#0a0f1e; align-items:center; gap:8px; }
+.lb-row:last-child { border-bottom:none; }
+.lb-rank { color:#4a5568; width:22px; font-size:10px; }
+.lb-name { flex:1; }
+.lb-score { color:#ffd700; font-weight:700; }
+.lb-row.me { background:#0a1e0a; }
+.lb-row.me .lb-name { color:#00ff88; }
 
-  /* PAUSE OVERLAY */
-  #pauseOverlay {
-    display: none;
-    position: absolute;
-    inset: 0;
-    background: rgba(5,8,16,0.85);
-    z-index: 40;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-    flex-direction: column;
-    gap: 12px;
-  }
-  #pauseOverlay.active { display: flex; }
-  .pause-title { font-size: 32px; font-weight: 700; color: var(--cyan); text-shadow: var(--glow-c); letter-spacing: 2px; }
-  .pause-sub { font-size: 12px; color: var(--dim); letter-spacing: 3px; }
+.btn-cyan { border-color:#00d4ff; color:#00d4ff; box-shadow:0 0 16px #00d4ff20; margin-bottom:8px; }
+.btn-cyan:active { background:#00d4ff; color:#000; }
+.btn-ghost { background:none; border:none; color:#4a5568; font-family:'Courier New',monospace; font-size:11px; cursor:pointer; text-decoration:underline; padding:4px; }
 
-  /* MULTIPLIER POPUP */
-  .multiplier-pop {
-    position: absolute;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 14px;
-    pointer-events: none;
-    animation: popUp 1.2s ease-out forwards;
-    z-index: 30;
-    text-shadow: 0 0 10px currentColor;
-  }
-  @keyframes popUp {
-    0% { transform: translateY(0) scale(0.8); opacity: 1; }
-    60% { transform: translateY(-40px) scale(1.1); opacity: 1; }
-    100% { transform: translateY(-70px) scale(1); opacity: 0; }
-  }
+/* Speed alert */
+#speed-alert {
+  position:fixed; top:60px; left:50%; transform:translateX(-50%);
+  font-family:'Courier New',monospace; font-weight:700;
+  font-size:clamp(12px,3.5vw,16px); color:#ffd700;
+  text-shadow:0 0 16px #ffd700; letter-spacing:2px;
+  pointer-events:none; opacity:0; z-index:25;
+  transition:opacity 0.4s;
+}
+#speed-alert.show { opacity:1; }
 
-  /* PAUSE BTN */
-  #pauseBtn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 4px 10px;
-    cursor: pointer;
-    z-index: 20;
-    letter-spacing: 1px;
-    transition: color 0.2s;
-  }
-  #pauseBtn:hover { color: var(--white); }
+/* ATH flash */
+#ath-flash {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-family:'Courier New',monospace; font-weight:700;
+  font-size:clamp(14px,4vw,22px); color:#ffd700;
+  text-shadow:0 0 20px #ffd700; pointer-events:none;
+  opacity:0; z-index:25; text-align:center;
+  transition:opacity 0.4s;
+}
+#ath-flash.show { opacity:1; }
 
-  /* COMBO METER */
-  #comboMeter {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--gold);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s;
-    text-shadow: 0 0 8px var(--gold);
-  }
-  #comboMeter.show { opacity: 1; }
-
-  /* NEW HIGH SCORE FLASH */
-  #newHSFlash {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: clamp(16px, 4vw, 28px);
-    color: var(--gold);
-    text-shadow: 0 0 20px var(--gold);
-    pointer-events: none;
-    opacity: 0;
-    text-align: center;
-    z-index: 25;
-    transition: opacity 0.5s;
-  }
-  #newHSFlash.show { opacity: 1; }
+/* Pause btn */
+#pause-btn {
+  position:fixed; top:56px; right:8px; z-index:15;
+  background:transparent; border:1px solid #1a2540; color:#4a5568;
+  font-family:'Courier New',monospace; font-size:10px;
+  padding:4px 9px; cursor:pointer; letter-spacing:1px;
+  display:none;
+}
+#pause-btn.active { display:block; }
 </style>
 </head>
 <body>
 
-<!-- ===== MENU ===== -->
-<div id="menu">
-  <div class="menu-ticker">
-    <span class="ticker-inner">
-      &nbsp;&nbsp;&nbsp;⚠ BREAKING: NVDA -18% — "just a dip" says analyst who bought at ATH &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-      ARK INVEST: "this is actually bullish" — 47th time this year &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-      RETAIL TRADER adds to losing position — "averaging down, trust the process" &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-      FED CHAIR: "we see no recession" (recession already started) &nbsp;&nbsp;&bull;&nbsp;&nbsp; 
-      WALL STREET RECOMMENDS: buying the dip on stocks that are still 80% overvalued &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-      CATHIE WOOD: "Tesla going to $2,000" (currently $47) &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-    </span>
-  </div>
-  <div class="menu-logo">CATCHING<br>FALLING KNIVES</div>
-  <div class="menu-sub">A Wall Street Survival Simulator</div>
-  <div class="menu-chart"><canvas id="menuChart"></canvas></div>
-  <div class="menu-tagline">"They said never catch a falling knife.<br>They were right. Do it anyway."</div>
-  <button class="btn-play" id="startBtn">▶ BUY THE DIP</button>
-  <div class="menu-highscore">ALL-TIME HIGH: <span id="menuHS">0</span> &nbsp;│&nbsp; GLORY AWAITS</div>
-  <div class="disclaimer">PAST PERFORMANCE IS NOT INDICATIVE OF FUTURE RESULTS. THIS GAME IS NOT FINANCIAL ADVICE. CATCHING FALLING KNIVES IN REAL MARKETS WILL RESULT IN FINANCIAL RUIN, EMOTIONAL DAMAGE, AND UNCOMFORTABLE CONVERSATIONS WITH YOUR SPOUSE. NOT AFFILIATED WITH ANY BANK, HEDGE FUND, OR CULT. ALL LOSSES ARE YOUR OWN.</div>
+<!-- TICKER -->
+<div id="ticker">
+  <span class="tick-inner">
+    ⚠ NVDA -18% — "just a dip" says analyst who bought at the top &nbsp;•&nbsp;
+    ARK INVEST: "this is actually bullish" — 52nd time this year &nbsp;•&nbsp;
+    RETAIL TRADER averages down into bankruptcy &nbsp;•&nbsp;
+    FED CHAIR: "we see no recession" (recession started 6 months ago) &nbsp;•&nbsp;
+    CATHIE WOOD: "Tesla to $2,000" (currently $47) &nbsp;•&nbsp;
+    CRAMER RECOMMENDS buying the stocks that are down 80% &nbsp;•&nbsp;
+    SOFTBANK buys the dip. The dip keeps dipping. &nbsp;•&nbsp;
+    CITADEL has entered the chat. Your position is now closed. &nbsp;•&nbsp;
+  </span>
 </div>
 
-<!-- ===== GAME ===== -->
-<div id="gameWrapper">
-  <div id="hud">
-    <div class="hud-cell">
-      <div class="hud-label">P&L</div>
-      <div class="hud-val" id="hScore">$0</div>
-    </div>
-    <div class="hud-cell">
-      <div class="hud-label">DRAWDOWN</div>
-      <div class="hud-val red" id="hMissed">0/15</div>
-    </div>
-    <div class="hud-cell">
-      <div class="hud-label">CLOCK</div>
-      <div class="hud-val cyan" id="hTime">0s</div>
-    </div>
-    <div class="hud-cell">
-      <div class="hud-label">VOLATILITY</div>
-      <div class="hud-val gold" id="hSpeed">LOW</div>
-    </div>
+<!-- MENU -->
+<div id="menu" class="screen active">
+  <div class="logo">CATCHING<br>FALLING KNIVES</div>
+  <div class="subtitle">A Wall Street Survival Simulator</div>
+
+  <div class="fake-chart">
+    <svg class="chart-svg" viewBox="0 0 360 90" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff3355" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#ff3355" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path id="chart-path-fill" fill="url(#cg)"/>
+      <path id="chart-path-line" fill="none" stroke="#ff3355" stroke-width="2"/>
+      <text x="352" y="12" font-size="8" fill="#ff3355" text-anchor="end" font-family="Courier New">YOU ARE HERE ↓</text>
+    </svg>
   </div>
 
-  <div id="canvasWrap">
-    <canvas id="gameCanvas"></canvas>
-    <button id="pauseBtn">⏸ HALT</button>
-    <div id="comboMeter">🔥 COMBO ×<span id="comboNum">1</span></div>
-    <div id="commentary"><div class="comment-bubble" id="commentText"></div></div>
-    <div id="newHSFlash">🏆 NEW ATH!</div>
-  </div>
-
-  <div id="pauseOverlay">
-    <div class="pause-title">MARKET HALTED</div>
-    <div class="pause-sub">TAP TO RESUME TRADING</div>
-  </div>
+  <div class="tagline">"They said never catch a falling knife.<br>They were right. Do it anyway."</div>
+  <button class="btn" id="start-btn">▶ BUY THE DIP</button>
+  <div class="hs-line">ALL-TIME HIGH: <span id="menu-hs">0</span> &nbsp;│&nbsp; GLORY AWAITS</div>
+  <div class="legal">PAST PERFORMANCE IS NOT INDICATIVE OF FUTURE RESULTS. THIS GAME IS NOT FINANCIAL ADVICE.<br>CATCHING FALLING KNIVES IN REAL MARKETS WILL RESULT IN FINANCIAL RUIN AND UNCOMFORTABLE CONVERSATIONS WITH YOUR SPOUSE.</div>
 </div>
 
-<!-- ===== GAME OVER ===== -->
-<div id="gameOver">
-  <div class="go-title" id="goTitle">MARGIN CALL</div>
-  <div class="go-subtitle" id="goSub">YOUR FUND HAS BEEN LIQUIDATED</div>
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-cell"><div class="hud-lbl">P&amp;L</div><div class="hud-val green" id="h-score">$0</div></div>
+  <div class="hud-cell"><div class="hud-lbl">LOSSES</div><div class="hud-val red" id="h-missed">0/15</div></div>
+  <div class="hud-cell"><div class="hud-lbl">TIME</div><div class="hud-val cyan" id="h-time">0s</div></div>
+  <div class="hud-cell"><div class="hud-lbl">VOL</div><div class="hud-val gold" id="h-speed">LOW</div></div>
+</div>
 
-  <div class="go-stats">
-    <div class="go-stat">
-      <div class="go-stat-label">Final P&L</div>
-      <div class="go-stat-val" style="color:var(--gold)" id="goScore">$0</div>
-    </div>
-    <div class="go-stat">
-      <div class="go-stat-label">Knives Caught</div>
-      <div class="go-stat-val" style="color:var(--green)" id="goCaught">0</div>
-    </div>
-    <div class="go-stat">
-      <div class="go-stat-label">Knives Dropped</div>
-      <div class="go-stat-val" style="color:var(--red)" id="goMissed">0</div>
-    </div>
-    <div class="go-stat">
-      <div class="go-stat-label">Max Combo</div>
-      <div class="go-stat-val" style="color:var(--cyan)" id="goCombo">×1</div>
-    </div>
+<!-- GAME AREA -->
+<div id="game-area">
+  <div id="danger-line"></div>
+  <div id="paddle"><span id="paddle-label">📊 YOUR FUND</span></div>
+  <div id="combo-meter">🔥 COMBO ×<span id="combo-num">1</span></div>
+  <div id="commentary"><div id="comment-text"></div></div>
+</div>
+
+<!-- PAUSE -->
+<button id="pause-btn">⏸ HALT</button>
+<div id="pause-overlay">
+  <h2>MARKET HALTED</h2>
+  <p>TAP TO RESUME TRADING</p>
+</div>
+
+<!-- SPEED ALERT -->
+<div id="speed-alert"></div>
+<div id="ath-flash">🏆 NEW ATH!</div>
+
+<!-- GAME OVER -->
+<div id="gameover" class="screen">
+  <div class="go-title" id="go-title">MARGIN CALL</div>
+  <div class="go-sub" id="go-sub">YOUR FUND HAS BEEN LIQUIDATED</div>
+  <div class="go-grid">
+    <div class="go-cell"><div class="go-cell-lbl">Final P&amp;L</div><div class="go-cell-val gold" id="go-score">$0</div></div>
+    <div class="go-cell"><div class="go-cell-lbl">Caught</div><div class="go-cell-val green" id="go-caught">0</div></div>
+    <div class="go-cell"><div class="go-cell-lbl">Dropped</div><div class="go-cell-val red" id="go-missed">0</div></div>
+    <div class="go-cell"><div class="go-cell-lbl">Max Combo</div><div class="go-cell-val cyan" id="go-combo">×1</div></div>
   </div>
-
-  <div class="go-epitaph" id="goEpitaph">"The market can remain irrational longer than you can remain solvent." — Keynes (probably)</div>
-
-  <div class="go-name-wrap">
-    <input type="text" id="playerName" placeholder="YOUR FUND NAME" maxlength="16">
-    <button id="saveScore">SAVE</button>
+  <div class="epitaph" id="epitaph"></div>
+  <div class="name-row">
+    <input type="text" id="player-name" placeholder="YOUR FUND NAME" maxlength="16" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button id="save-btn">SAVE</button>
   </div>
-
-  <div class="go-leaderboard" id="leaderboard"></div>
-
-  <button class="btn-again" id="playAgain">▶ LEVER UP AGAIN</button>
-  <button class="btn-menu-back" id="backToMenu">← back to main</button>
+  <div class="lb" id="lb"></div>
+  <button class="btn btn-cyan" id="again-btn">▶ LEVER UP AGAIN</button>
+  <button class="btn-ghost" id="menu-btn">← back to main</button>
 </div>
 
 <script>
-// ============================================================
-//  POLYFILLS — iOS Safari compat
-// ============================================================
-function roundRect(ctx, x, y, w, h, r) {
-  if (w < 2*r) r = w/2;
-  if (h < 2*r) r = h/2;
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.arcTo(x+w, y,   x+w, y+h, r);
-  ctx.arcTo(x+w, y+h, x,   y+h, r);
-  ctx.arcTo(x,   y+h, x,   y,   r);
-  ctx.arcTo(x,   y,   x+w, y,   r);
-  ctx.closePath();
-}
-
-// ============================================================
-//  GAME CONFIG
-// ============================================================
+// ── CONFIG ──────────────────────────────────────────────────
 const KNIVES = [
-  { emoji:'📉', label:'SPY',   pts:10,  penalty:8,   speed:1.0, size:38, rare:false },
-  { emoji:'🔪', label:'NVDA',  pts:25,  penalty:20,  speed:1.3, size:34, rare:false },
-  { emoji:'💊', label:'TSLA',  pts:40,  penalty:30,  speed:1.6, size:30, rare:false },
-  { emoji:'🌕', label:'COIN',  pts:15,  penalty:12,  speed:0.9, size:36, rare:false },
-  { emoji:'🦍', label:'GME',   pts:60,  penalty:50,  speed:2.0, size:28, rare:true  },
-  { emoji:'🐸', label:'PEPE',  pts:80,  penalty:0,   speed:2.4, size:26, rare:true  },
-  { emoji:'🚀', label:'ARKK',  pts:100, penalty:80,  speed:2.8, size:24, rare:true  },
+  {e:'📉', l:'SPY',  pts:10, pen:8,  spd:1.0, sz:34, rare:false},
+  {e:'🔪', l:'NVDA', pts:25, pen:20, spd:1.3, sz:30, rare:false},
+  {e:'💊', l:'TSLA', pts:40, pen:30, spd:1.6, sz:28, rare:false},
+  {e:'🌕', l:'COIN', pts:15, pen:12, spd:0.9, sz:32, rare:false},
+  {e:'🦍', l:'GME',  pts:60, pen:50, spd:2.0, sz:26, rare:true },
+  {e:'🐸', l:'PEPE', pts:80, pen:0,  spd:2.4, sz:24, rare:true },
+  {e:'🚀', l:'ARKK', pts:100,pen:80, spd:2.8, sz:22, rare:true },
 ];
 const POWERUPS = [
-  { emoji:'📞', label:'MARGIN CALL',  effect:'bad',  size:32 }, // lose lives
-  { emoji:'🏦', label:'BAILOUT',      effect:'good', size:36 }, // gain lives
-  { emoji:'🤡', label:'CRAMER PICK',  effect:'bad2', size:34 }, // reverse controls briefly
-  { emoji:'💎', label:'DIAMOND HANDS',effect:'mult', size:36 }, // 2× multiplier
-  { emoji:'🦆', label:'DUCK',         effect:'life', size:30 }, // +1 life (rare joe homage)
+  {e:'📞', l:'MARGIN CALL',   fx:'bad',  sz:28},
+  {e:'🏦', l:'BAILOUT',       fx:'good', sz:32},
+  {e:'🤡', l:'CRAMER PICK',   fx:'rev',  sz:30},
+  {e:'💎', l:'DIAMOND HANDS', fx:'mult', sz:32},
+  {e:'🦆', l:'DUCK',          fx:'life', sz:28},
 ];
-
 const COMMENTS = {
-  catch: [
-    '"Strong hands. That's the alpha."',
-    '"Classic buy-the-dip execution."',
-    '"My boy Warren would be proud."',
-    '"YOLO confirmed profitable."',
-    '"That's what we call a conviction play."',
-    '"Catching knives? Bullish."',
-    '"Add to position. Trust the process."',
-    '"Sir, this is a Wendy\'s. But also, nice catch."',
-    '"Your therapist will hear about this."',
-    '"The fundamentals support this decision."',
-    '"Running it back. I like it."',
-    '"Risk/reward: yes."',
-  ],
-  miss: [
-    '"Unfortunate. Have you considered options?"',
-    '"The market has spoken. You have not."',
-    '"Another loss? BTFD harder."',
-    '"Margin expanding... in the wrong direction."',
-    '"Your Robinhood balance sends its condolences."',
-    '"Classic retail timing."',
-    '"Cramer would have caught that."',
-    '"Have you tried praying to the Fed?"',
-    '"Loss porn incoming."',
-    '"That one stings. Like a knife."',
-    '"Your risk manager has resigned."',
-  ],
-  rare: [
-    '"🚨 RARE KNIFE ALERT 🚨 This is your moment."',
-    '"Volatility spike. Apes together strong."',
-    '"Wall Street bets is watching."',
-    '"This trade will define your career."',
-    '"YOLO or FOMO — choose wisely."',
-  ],
-  combo: [
-    '"You\'re in the zone. Circuit breakers are worried."',
-    '"COMBO MODE: Your P&L has gone parabolic."',
-    '"Goldman Sachs would like your trading strategy."',
-    '"You\'re the algo now."',
-    '"This is what they mean by \'flow state\'."',
-  ],
-  gameover: [
-    '"The market can stay irrational longer than you can stay solvent." — Keynes',
-    '"Be fearful when others are greedy... you were greedy." — Buffett (adapted)',
-    '"In the short run, the market is a voting machine. You voted wrong." — Graham',
-    '"Rule #1: Don\'t lose money. Rule #2: See Rule #1." — Buffett (you ignored both)',
-    '"October is particularly dangerous. So is every other month." — Twain (paraphrased)',
-    '"The investor\'s chief problem is himself." — Graham (confirmed)',
-    '"Behind every stock is a company. You forgot that company." — Lynch',
-    '"Derivatives are weapons of mass destruction." — Buffett (re: your gameplay)',
-    '"I\'ve never bought stocks on leverage. Neither should you." — Literally everyone',
-    '"Risk management is for people who plan on surviving." — Nobody ever (apparently)',
-  ],
+  catch:['"Strong hands. That\'s the alpha."','"Classic buy-the-dip execution."','"Warren would be proud."','"YOLO confirmed profitable."','"That\'s what we call a conviction play."','"Sir, this is a Wendy\'s. But also, nice catch."','"Your therapist will hear about this."','"Risk/reward: yes."','"Running it back. I like it."'],
+  miss:['"Unfortunate. Have you considered options?"','"The market has spoken. You have not."','"Classic retail timing."','"Cramer would have caught that."','"Have you tried praying to the Fed?"','"Loss porn incoming."','"That one stings. Like a knife."','"Your risk manager has resigned."','"Your Robinhood balance sends its condolences."'],
+  rare:['"🚨 RARE KNIFE 🚨 This defines your career."','"Volatility spike. Apes together strong."','"WallStreetBets is watching."','"YOLO or FOMO — choose wisely."'],
+  combo:['"You\'re in the zone. Circuit breakers are worried."','"Goldman wants your trading strategy."','"You\'re the algo now."','"This is what they mean by flow state."'],
+  over:['"The market can stay irrational longer than you can stay solvent." — Keynes','"Be fearful when others are greedy. You were greedy." — Buffett (adapted)','"Rule #1: Don\'t lose money. Rule #2: See Rule #1." — Buffett (you ignored both)','"Behind every stock is a company. You forgot the company." — Lynch','"Derivatives are weapons of mass destruction." — Buffett (re: your gameplay)','"Risk management is for people who plan on surviving." — Nobody (apparently)'],
 };
+const SPEED_LABELS = ['LOW','MEDIUM','HIGH','EXTREME','INSANE','💀REKT'];
 
-// ============================================================
-//  CORE STATE
-// ============================================================
-let state = 'menu';
-let score = 0, missed = 0, caught = 0, elapsed = 0;
-let combo = 1, maxCombo = 1;
-let lives = 15;
-let paused = false;
-let gameLoopId, timerInterval;
-let objects = [];
-let spawnTimer = 0;
-let spawnInterval = 110; // frames
-let frameCount = 0;
-let multiplier = 1;
-let multTimer = 0;
-let reverseTimer = 0;
-let lastSpeedLevel = 0;
-let commentTimeout;
-let prevHighScore = 0;
+// ── STATE ────────────────────────────────────────────────────
+let score=0, missed=0, caught=0, elapsed=0;
+let combo=1, maxCombo=1, lives=15;
+let multiplier=1, multTimer=0, reverseTimer=0;
+let paused=false, running=false;
+let objects=[], frameId=null, timerInt=null;
+let frameCount=0, spawnTimer=0, lastSL=0;
+let paddleXpx=0;
+let commentTO=null, speedAlertTO=null, athTO=null;
+let prevHS=0;
+const PADDLE_W_FRAC=0.22, PADDLE_H=14;
 
-// Paddle
-let paddleX = 0.5; // 0-1 normalised
-const PADDLE_W_FRAC = 0.22;
-const PADDLE_H = 16;
+// ── DOM ──────────────────────────────────────────────────────
+const gameArea   = document.getElementById('game-area');
+const paddle     = document.getElementById('paddle');
+const paddleLabel= document.getElementById('paddle-label');
+const comboMeter = document.getElementById('combo-meter');
+const comboNum   = document.getElementById('combo-num');
+const commentEl  = document.getElementById('comment-text');
+const speedAlert = document.getElementById('speed-alert');
+const athFlash   = document.getElementById('ath-flash');
+const hud        = document.getElementById('hud');
+const pauseBtn   = document.getElementById('pause-btn');
+const pauseOver  = document.getElementById('pause-overlay');
 
-// ============================================================
-//  CANVAS + RESIZE
-// ============================================================
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-function resize() {
-  const wrap = document.getElementById('canvasWrap');
-  canvas.width = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
-}
-window.addEventListener('resize', resize);
-
-// ============================================================
-//  INPUT
-// ============================================================
-let touchX = null;
-
-canvas.addEventListener('mousemove', e => {
-  const r = canvas.getBoundingClientRect();
-  paddleX = (e.clientX - r.left) / r.width;
-});
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  const r = canvas.getBoundingClientRect();
-  touchX = (e.touches[0].clientX - r.left) / r.width;
-  paddleX = touchX;
-}, { passive: false });
-
-document.addEventListener('keydown', e => {
-  if (e.key === ' ' || e.key === 'Escape') togglePause();
-});
-document.getElementById('pauseBtn').addEventListener('click', togglePause);
-document.getElementById('pauseOverlay').addEventListener('click', togglePause);
-
-function togglePause() {
-  if (state !== 'playing') return;
-  paused = !paused;
-  document.getElementById('pauseOverlay').classList.toggle('active', paused);
-  if (!paused) requestAnimationFrame(gameLoop);
+// ── CHART ────────────────────────────────────────────────────
+function buildChart() {
+  const pts = [];
+  let v = 70;
+  for (let i=0;i<60;i++) {
+    v += (Math.random()-0.44)*8;
+    if (i>42) v += 5+Math.random()*6;
+    v = Math.max(8, Math.min(82, v));
+    pts.push(v);
+  }
+  const xs = pts.map((_,i)=>(i/(pts.length-1))*360);
+  const line = pts.map((y,i)=>`${i===0?'M':'L'}${xs[i].toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const fill = line + ` L360,90 L0,90 Z`;
+  document.getElementById('chart-path-line').setAttribute('d', line);
+  document.getElementById('chart-path-fill').setAttribute('d', fill);
 }
 
-// ============================================================
-//  SPAWN
-// ============================================================
-function weightedRandom(arr, weightFn) {
-  const weights = arr.map(weightFn);
-  const total = weights.reduce((a,b)=>a+b,0);
-  let r = Math.random() * total;
-  for (let i=0;i<arr.length;i++) { r -= weights[i]; if (r<=0) return arr[i]; }
-  return arr[arr.length-1];
-}
-
-function getSpeedLevel() {
-  if (elapsed < 20) return 0;
-  if (elapsed < 45) return 1;
-  if (elapsed < 75) return 2;
-  if (elapsed < 110) return 3;
-  if (elapsed < 150) return 4;
+// ── UTILS ────────────────────────────────────────────────────
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function areaW(){ return gameArea.clientWidth; }
+function areaH(){ return gameArea.clientHeight; }
+function getSpeedLevel(){
+  if(elapsed<20) return 0;
+  if(elapsed<45) return 1;
+  if(elapsed<75) return 2;
+  if(elapsed<110)return 3;
+  if(elapsed<150)return 4;
   return 5;
 }
-const speedLabels = ['LOW','MEDIUM','HIGH','EXTREME','INSANE','💀REKT'];
+function paddleW(){ return areaW()*PADDLE_W_FRAC; }
 
-function spawnObject() {
-  const sl = getSpeedLevel();
-  const baseSpeed = (1 + sl * 0.55) * (canvas.height / 420);
-
-  // Chance to spawn powerup
-  if (Math.random() < 0.08) {
-    const pu = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
-    objects.push({
-      type: 'powerup',
-      data: pu,
-      x: 0.05 + Math.random() * 0.9,
-      y: -0.05,
-      vy: baseSpeed * 0.75,
-      rot: 0,
-      rotV: (Math.random()-0.5)*0.12,
-      wobble: Math.random()*Math.PI*2,
-    });
-    return;
-  }
-
-  // Knife
-  const knife = weightedRandom(KNIVES, k => k.rare ? 0.08 : 1);
-  objects.push({
-    type: 'knife',
-    data: knife,
-    x: 0.05 + Math.random() * 0.9,
-    y: -0.05,
-    vy: baseSpeed * knife.speed,
-    rot: 0,
-    rotV: (Math.random()-0.5)*0.15,
-    wobble: Math.random()*Math.PI*2,
-    label: knife.label,
-    rare: knife.rare,
-  });
+// ── COMMENT ──────────────────────────────────────────────────
+function showComment(pool){
+  clearTimeout(commentTO);
+  commentEl.textContent = rnd(COMMENTS[pool]);
+  commentEl.classList.add('show');
+  commentTO = setTimeout(()=>commentEl.classList.remove('show'), 2800);
 }
 
-// ============================================================
-//  COMMENT SYSTEM
-// ============================================================
-function showComment(pool) {
-  const arr = COMMENTS[pool];
-  const text = arr[Math.floor(Math.random()*arr.length)];
-  const el = document.getElementById('commentText');
-  clearTimeout(commentTimeout);
-  el.textContent = text;
-  el.classList.add('show');
-  commentTimeout = setTimeout(()=>el.classList.remove('show'), 2800);
-}
-
-// ============================================================
-//  POPUP
-// ============================================================
-function spawnPopup(x, y, text, color) {
-  const wrap = document.getElementById('canvasWrap');
+// ── POPUP ────────────────────────────────────────────────────
+function popup(x, y, text, color){
   const el = document.createElement('div');
-  el.className = 'multiplier-pop';
+  el.className = 'popup';
   el.textContent = text;
   el.style.color = color;
-  el.style.left = (x * 100) + '%';
-  el.style.top = (y * 100) + '%';
-  wrap.appendChild(el);
-  setTimeout(()=>el.remove(), 1300);
+  el.style.left = x+'px';
+  el.style.top  = y+'px';
+  gameArea.appendChild(el);
+  setTimeout(()=>el.remove(), 1200);
 }
 
-// ============================================================
-//  HUD UPDATE
-// ============================================================
-function updateHUD() {
+// ── SPAWN ────────────────────────────────────────────────────
+function spawnObj(){
   const sl = getSpeedLevel();
-  document.getElementById('hScore').textContent = '$' + score.toLocaleString();
-  document.getElementById('hScore').className = 'hud-val' + (score<0?' red':'');
-  document.getElementById('hMissed').textContent = missed + '/' + lives;
-  document.getElementById('hTime').textContent = elapsed + 's';
-  document.getElementById('hSpeed').textContent = speedLabels[sl] || '💀REKT';
-  
-  if (combo > 1) {
-    document.getElementById('comboMeter').classList.add('show');
-    document.getElementById('comboNum').textContent = combo;
-  } else {
-    document.getElementById('comboMeter').classList.remove('show');
-  }
+  const baseSpd = (1+sl*0.55) * (areaH()/500);
+  const W = areaW();
 
-  // Speed level change alert
-  if (sl > lastSpeedLevel) {
-    lastSpeedLevel = sl;
-    const msgs = ['','📈 VOLATILITY RISING','⚡ HIGH VOL MODE','🔥 EXTREME VOL','💀 MARKET PANIC','☠️ BLACK MONDAY'];
-    if (msgs[sl]) spawnPopup(0.5, 0.3, msgs[sl], '#ffd700');
-  }
-}
-
-// ============================================================
-//  COLLISION
-// ============================================================
-function checkCatch(obj) {
-  const pw = PADDLE_W_FRAC * canvas.width * (multiplier > 1 ? 1.15 : 1);
-  const ph = PADDLE_H;
-  const px = paddleX * canvas.width;
-  const py = canvas.height - 40;
-
-  const ox = obj.x * canvas.width;
-  const oy = obj.y * canvas.height;
-
-  return Math.abs(ox - px) < (pw/2 + (obj.data.size||32)/2) &&
-         Math.abs(oy - py) < (ph/2 + (obj.data.size||32)/2 + 8);
-}
-
-// ============================================================
-//  APPLY POWERUP
-// ============================================================
-function applyPowerup(pu, caught) {
-  if (caught) {
-    if (pu.effect === 'good') {
-      missed = Math.max(0, missed - 3);
-      showComment('catch');
-      spawnPopup(paddleX, 0.8, '🏦 BAILOUT! -3 LOSSES', '#00ff88');
-    } else if (pu.effect === 'mult') {
-      multiplier = 2;
-      multTimer = 300;
-      spawnPopup(paddleX, 0.8, '💎 2× MULTIPLIER', '#ffd700');
-    } else if (pu.effect === 'life') {
-      missed = Math.max(0, missed - 1);
-      spawnPopup(paddleX, 0.8, '🦆 RESCUED! -1 LOSS', '#00d4ff');
-    } else if (pu.effect === 'bad') {
-      missed += 2;
-      spawnPopup(paddleX, 0.8, '📞 MARGIN CALL! +2 LOSSES', '#ff3355');
-    } else if (pu.effect === 'bad2') {
-      reverseTimer = 180;
-      spawnPopup(paddleX, 0.8, '🤡 CRAMER PICK! CONTROLS REVERSED', '#ff6600');
-    }
-  } else {
-    // missed powerup
-    if (pu.effect === 'good' || pu.effect === 'life') {
-      // missed bailout
-      spawnPopup(Math.random(), 0.5, 'BAILOUT MISSED 🤦', '#4a5568');
-    } else if (pu.effect === 'mult') {
-      spawnPopup(Math.random(), 0.5, 'MISSED 2× 💀', '#4a5568');
-    }
-  }
-}
-
-// ============================================================
-//  DRAW
-// ============================================================
-function draw() {
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  // Background grid
-  ctx.strokeStyle = '#0d1525';
-  ctx.lineWidth = 1;
-  const grid = 48;
-  for (let x=0;x<W;x+=grid) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for (let y=0;y<H;y+=grid) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-  // Danger zone line
-  ctx.strokeStyle = '#1a2540';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([6,4]);
-  ctx.beginPath(); ctx.moveTo(0, H-50); ctx.lineTo(W, H-50); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Falling objects
-  for (const obj of objects) {
-    const ox = obj.x * W;
-    const oy = obj.y * H;
-    const sz = obj.data.size || 32;
-
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.rotate(obj.rot);
-
-    // Glow for rare items
-    if (obj.rare || (obj.type==='powerup' && obj.data.effect==='mult')) {
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = obj.rare ? '#ffd700' : '#00d4ff';
-    }
-
-    ctx.font = sz + 'px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(obj.data.emoji, 0, 0);
-
-    // Label
-    ctx.shadowBlur = 0;
-    ctx.font = '600 9px Courier New, monospace';
-    ctx.fillStyle = obj.rare ? '#ffd700' : (obj.type==='powerup' ? '#00d4ff' : '#4a6080');
-    ctx.fillText(obj.label || obj.data.label, 0, sz/2 + 9);
-
-    ctx.restore();
-  }
-
-  // Paddle
-  const pw = PADDLE_W_FRAC * W;
-  const px = paddleX * W;
-  const py = H - 40;
-
-  // Reverse indicator
-  if (reverseTimer > 0) {
-    ctx.strokeStyle = '#ff6600';
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#ff6600';
-  } else if (multiplier > 1) {
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ffd700aa';
-  } else {
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = '#00ff8866';
-  }
-
-  // Paddle body
-  const pColor = reverseTimer>0 ? '#ff6600' : (multiplier>1 ? '#ffd700' : '#00ff88');
-  ctx.fillStyle = pColor + '18';
-  ctx.strokeStyle = pColor;
-  ctx.beginPath();
-  roundRect(ctx, px - pw/2, py - PADDLE_H/2, pw, PADDLE_H, 4);
-  ctx.fill();
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Label on paddle
-  ctx.fillStyle = pColor + 'aa';
-  ctx.font = '600 9px Courier New, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(reverseTimer>0 ? '🤡 CRAMER' : (multiplier>1 ? '💎 ×2' : '📊 YOUR FUND'), px, py);
-
-  // Cursor glow dot
-  ctx.beginPath();
-  ctx.arc(px, py, 3, 0, Math.PI*2);
-  ctx.fillStyle = pColor;
-  ctx.fill();
-}
-
-// ============================================================
-//  GAME LOOP
-// ============================================================
-function gameLoop() {
-  if (state !== 'playing' || paused) return;
-  frameCount++;
-
-  // Timers
-  if (multTimer > 0) { multTimer--; if (multTimer===0) { multiplier=1; } }
-  if (reverseTimer > 0) reverseTimer--;
-
-  // Spawn
-  spawnTimer++;
-  const sl = getSpeedLevel();
-  const si = Math.max(30, spawnInterval - sl*14);
-  if (spawnTimer >= si) {
-    spawnTimer = 0;
-    spawnObject();
-    // Sometimes spawn 2 at high speed
-    if (sl >= 3 && Math.random() < 0.3) spawnObject();
-    if (sl >= 5 && Math.random() < 0.2) spawnObject();
-  }
-
-  // Reverse paddle
-  if (reverseTimer > 0) {
-    // paddleX is controlled externally; reverse is visual effect only in draw
-    // Actually let's invert movement: store true position, draw inverted
-  }
-
-  // Update objects
-  const toRemove = [];
-  for (let i=0; i<objects.length; i++) {
-    const obj = objects[i];
-    obj.y += obj.vy / canvas.height;
-    obj.rot += obj.rotV;
-    obj.wobble += 0.08;
-
-    if (reverseTimer > 0) {
-      obj.x += Math.sin(obj.wobble) * 0.003;
-    }
-
-    // Check catch
-    if (checkCatch(obj)) {
-      toRemove.push(i);
-      if (obj.type === 'knife') {
-        const pts = Math.round(obj.data.pts * multiplier * (combo >= 5 ? 1.5 : 1));
-        score += pts;
-        caught++;
-        combo++;
-        maxCombo = Math.max(maxCombo, combo);
-        if (obj.rare) showComment('rare');
-        else if (combo >= 5 && frameCount % 5 === 0) showComment('combo');
-        else if (Math.random() < 0.35) showComment('catch');
-        spawnPopup(obj.x, obj.y, (pts>0?'+':'') + '$' + pts + (obj.rare?' 🔥':''), obj.rare?'#ffd700':'#00ff88');
-        if (score > prevHighScore) {
-          document.getElementById('newHSFlash').classList.add('show');
-          setTimeout(()=>document.getElementById('newHSFlash').classList.remove('show'),1500);
-        }
-      } else {
-        applyPowerup(obj.data, true);
-      }
-    } else if (obj.y > 1.08) {
-      toRemove.push(i);
-      if (obj.type === 'knife') {
-        const pen = obj.data.penalty;
-        score -= pen;
-        missed++;
-        combo = 1;
-        if (Math.random() < 0.5) showComment('miss');
-        spawnPopup(obj.x, 0.9, '-$' + pen + ' 💀', '#ff3355');
-        // Flash HUD
-        document.getElementById('hMissed').style.textShadow = '0 0 20px #ff3355';
-        setTimeout(()=>document.getElementById('hMissed').style.textShadow='',400);
-      } else {
-        applyPowerup(obj.data, false);
-      }
-    }
-  }
-
-  // Remove caught/missed (reverse order)
-  for (let i = toRemove.length-1; i>=0; i--) objects.splice(toRemove[i],1);
-
-  // Check game over
-  if (missed >= lives) {
-    endGame();
+  if(Math.random()<0.08){
+    const pu = rnd(POWERUPS);
+    const el = document.createElement('div');
+    el.className='obj powerup';
+    el.innerHTML=`${pu.e}<span class="obj-label">${pu.l}</span>`;
+    el.style.fontSize=pu.sz+'px';
+    el.style.left=(0.05+Math.random()*0.88)*W+'px';
+    el.style.top='-50px';
+    gameArea.appendChild(el);
+    objects.push({el, pu, type:'powerup', y:-50, vy:baseSpd*0.75, x:parseFloat(el.style.left)});
     return;
   }
 
+  // weighted knife
+  const pool=[];
+  KNIVES.forEach(k=>{ for(let i=0;i<(k.rare?1:10);i++) pool.push(k); });
+  const k = rnd(pool);
+  const el = document.createElement('div');
+  el.className='obj'+(k.rare?' rare':'');
+  el.innerHTML=`${k.e}<span class="obj-label">${k.l}</span>`;
+  el.style.fontSize=k.sz+'px';
+  el.style.left=(0.05+Math.random()*0.88)*W+'px';
+  el.style.top='-50px';
+  gameArea.appendChild(el);
+  objects.push({el, k, type:'knife', y:-50, vy:baseSpd*k.spd, x:parseFloat(el.style.left)});
+}
+
+// ── COLLISION ────────────────────────────────────────────────
+function checkHit(obj){
+  const ph = areaH()-36-PADDLE_H/2;
+  const pw2 = paddleW()/2 + (obj.k||obj.pu).sz/2 + 6;
+  const cx  = obj.x + (obj.k||obj.pu).sz/2;
+  return Math.abs(obj.y - ph) < 28 && Math.abs(cx - paddleXpx) < pw2;
+}
+
+// ── POWERUP EFFECT ───────────────────────────────────────────
+function applyPU(pu, hit){
+  if(hit){
+    if(pu.fx==='good'){ missed=Math.max(0,missed-3); popup(paddleXpx,areaH()-80,'🏦 BAILOUT! -3 LOSSES','#00ff88'); }
+    else if(pu.fx==='mult'){ multiplier=2; multTimer=360; popup(paddleXpx,areaH()-80,'💎 2× MULTIPLIER!','#ffd700'); }
+    else if(pu.fx==='life'){ missed=Math.max(0,missed-1); popup(paddleXpx,areaH()-80,'🦆 SAVED! -1 LOSS','#00d4ff'); }
+    else if(pu.fx==='bad'){ missed+=2; popup(paddleXpx,areaH()-80,'📞 MARGIN CALL! +2 LOSSES','#ff3355'); }
+    else if(pu.fx==='rev'){ reverseTimer=200; popup(paddleXpx,areaH()-80,'🤡 CONTROLS REVERSED!','#ff6600'); }
+  }
+}
+
+// ── HUD UPDATE ───────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('h-score').textContent='$'+score.toLocaleString();
+  document.getElementById('h-score').className='hud-val '+(score<0?'red':'green');
+  document.getElementById('h-missed').textContent=missed+'/'+lives;
+  document.getElementById('h-time').textContent=elapsed+'s';
+  const sl=getSpeedLevel();
+  document.getElementById('h-speed').textContent=SPEED_LABELS[sl]||'💀REKT';
+  comboNum.textContent=combo;
+  comboMeter.classList.toggle('show',combo>1);
+  // speed level up
+  if(sl>lastSL){
+    lastSL=sl;
+    const msgs=['','📈 VOL RISING','⚡ HIGH VOL','🔥 EXTREME VOL','💀 MARKET PANIC','☠️ BLACK MONDAY'];
+    if(msgs[sl]){
+      speedAlert.textContent=msgs[sl];
+      speedAlert.classList.add('show');
+      clearTimeout(speedAlertTO);
+      speedAlertTO=setTimeout(()=>speedAlert.classList.remove('show'),2000);
+    }
+  }
+}
+
+// ── PADDLE STYLE ─────────────────────────────────────────────
+function updatePaddleStyle(){
+  if(reverseTimer>0){
+    paddle.className='reverse'; paddleLabel.textContent='🤡 CRAMER';
+  } else if(multiplier>1){
+    paddle.className='multi'; paddleLabel.textContent='💎 ×2';
+  } else {
+    paddle.className=''; paddleLabel.textContent='📊 YOUR FUND';
+  }
+  const pw=paddleW();
+  paddle.style.width=pw+'px';
+  const effectivePX = reverseTimer>0 ? areaW()-paddleXpx : paddleXpx;
+  paddle.style.left=effectivePX+'px';
+}
+
+// ── MAIN LOOP ────────────────────────────────────────────────
+function loop(){
+  if(!running||paused) return;
+  frameCount++;
+  if(multTimer>0){ multTimer--; if(multTimer===0) multiplier=1; }
+  if(reverseTimer>0) reverseTimer--;
+
+  // spawn
+  const sl=getSpeedLevel();
+  const si=Math.max(28, 110-sl*16);
+  if(++spawnTimer>=si){
+    spawnTimer=0;
+    spawnObj();
+    if(sl>=3&&Math.random()<0.3) spawnObj();
+    if(sl>=5&&Math.random()<0.2) spawnObj();
+  }
+
+  const dead=[];
+  const H=areaH();
+
+  for(let i=0;i<objects.length;i++){
+    const obj=objects[i];
+    obj.y+=obj.vy;
+    obj.el.style.top=obj.y+'px';
+
+    if(checkHit(obj)){
+      dead.push(i);
+      if(obj.type==='knife'){
+        const k=obj.k;
+        const pts=Math.round(k.pts*multiplier*(combo>=5?1.5:1));
+        score+=pts; caught++; combo++; maxCombo=Math.max(maxCombo,combo);
+        if(k.rare) showComment('rare');
+        else if(combo>=5&&frameCount%5===0) showComment('combo');
+        else if(Math.random()<0.35) showComment('catch');
+        popup(obj.x, obj.y, (pts>=0?'+':'')+'$'+pts+(k.rare?' 🔥':''), k.rare?'#ffd700':'#00ff88');
+        if(score>prevHS){
+          athFlash.classList.add('show');
+          clearTimeout(athTO);
+          athTO=setTimeout(()=>athFlash.classList.remove('show'),1600);
+        }
+      } else { applyPU(obj.pu,true); }
+    } else if(obj.y>H+10){
+      dead.push(i);
+      if(obj.type==='knife'){
+        score-=obj.k.pen; missed++; combo=1;
+        if(Math.random()<0.5) showComment('miss');
+        popup(obj.x, H-60, '-$'+obj.k.pen+' 💀','#ff3355');
+        // flash missed counter
+        const hm=document.getElementById('h-missed');
+        hm.style.textShadow='0 0 16px #ff3355';
+        setTimeout(()=>hm.style.textShadow='',400);
+      } else { applyPU(obj.pu,false); }
+    }
+  }
+
+  for(let i=dead.length-1;i>=0;i--){
+    objects[dead[i]].el.remove();
+    objects.splice(dead[i],1);
+  }
+
+  if(missed>=lives){ endGame(); return; }
+
   updateHUD();
-  draw();
-  requestAnimationFrame(gameLoop);
+  updatePaddleStyle();
+  frameId=requestAnimationFrame(loop);
 }
 
-// ============================================================
-//  TIMER
-// ============================================================
-function startTimer() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(()=>{ if (!paused) elapsed++; }, 1000);
+// ── INPUT ────────────────────────────────────────────────────
+function setpaddle(clientX){
+  const r=gameArea.getBoundingClientRect();
+  paddleXpx=Math.max(paddleW()/2, Math.min(areaW()-paddleW()/2, clientX-r.left));
+}
+gameArea.addEventListener('mousemove', e=>setpaddle_or(e.clientX));
+gameArea.addEventListener('touchmove', e=>{ e.preventDefault(); setpaddle_or(e.touches[0].clientX); },{passive:false});
+gameArea.addEventListener('touchstart',e=>{ e.preventDefault(); setpaddle_or(e.touches[0].clientX); },{passive:false});
+function setpaddle_or(x){ paddleXpx=Math.max(paddleW()/2,Math.min(areaW()-paddleW()/2,x-gameArea.getBoundingClientRect().left)); }
+
+document.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Escape') togglePause(); });
+pauseBtn.addEventListener('click',togglePause);
+pauseOver.addEventListener('click',togglePause);
+
+function togglePause(){
+  if(!running) return;
+  paused=!paused;
+  pauseOver.classList.toggle('active',paused);
+  if(!paused) frameId=requestAnimationFrame(loop);
 }
 
-// ============================================================
-//  START / END
-// ============================================================
-function startGame() {
-  prevHighScore = getHighScore();
-  score = 0; missed = 0; caught = 0; elapsed = 0;
-  combo = 1; maxCombo = 1;
-  lives = 15;
-  multiplier = 1; multTimer = 0; reverseTimer = 0;
-  objects = []; spawnTimer = 0; frameCount = 0; lastSpeedLevel = 0;
-  paused = false;
+// ── START ────────────────────────────────────────────────────
+function startGame(){
+  prevHS=getHS();
+  score=0;missed=0;caught=0;elapsed=0;combo=1;maxCombo=1;lives=15;
+  multiplier=1;multTimer=0;reverseTimer=0;
+  objects=[];spawnTimer=0;frameCount=0;lastSL=0;paused=false;running=true;
+  // clear DOM objects
+  document.querySelectorAll('.obj,.popup').forEach(e=>e.remove());
 
-  document.getElementById('menu').style.display = 'none';
-  document.getElementById('gameOver').classList.remove('active');
-  document.getElementById('gameWrapper').classList.add('active');
-  document.getElementById('pauseOverlay').classList.remove('active');
-  document.getElementById('newHSFlash').classList.remove('show');
+  document.getElementById('menu').classList.remove('active');
+  document.getElementById('gameover').classList.remove('active');
+  gameArea.classList.add('active');
+  hud.classList.add('active');
+  pauseBtn.classList.add('active');
+  pauseOver.classList.remove('active');
+  athFlash.classList.remove('show');
+  speedAlert.classList.remove('show');
 
-  state = 'playing';
-  resize();
-  startTimer();
-  requestAnimationFrame(gameLoop);
+  paddleXpx=areaW()/2;
+  paddle.style.width=paddleW()+'px';
+  paddle.style.left=paddleXpx+'px';
+
+  document.getElementById('save-btn').textContent='SAVE';
+  document.getElementById('save-btn').disabled=false;
+  document.getElementById('player-name').value='';
+
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>{ if(!paused) elapsed++; },1000);
+  cancelAnimationFrame(frameId);
+  frameId=requestAnimationFrame(loop);
 }
 
-function endGame() {
-  state = 'gameover';
-  clearInterval(timerInterval);
+// ── END ──────────────────────────────────────────────────────
+function endGame(){
+  running=false;
+  clearInterval(timerInt);
+  cancelAnimationFrame(frameId);
+  document.querySelectorAll('.obj,.popup').forEach(e=>e.remove());
+  objects=[];
 
-  // Pick outcome
-  const ratio = caught / Math.max(1, caught + missed);
-  let title, sub;
-  if (score >= 5000)       { title='LEGENDARY FUND'; sub='WARREN BUFFETT HAS NOTICED YOU'; }
-  else if (score >= 2500)  { title='STRONG ALPHA'; sub='YOUR LP\'S ARE IMPRESSED'; }
-  else if (score >= 1000)  { title='DECENT RETURN'; sub='BETTER THAN BONDS, BARELY'; }
-  else if (score >= 0)     { title='FLAT BOOK'; sub='YOU SURVIVED. THAT\'S SOMETHING.'; }
-  else if (score >= -500)  { title='DRAWDOWN'; sub='THE RISK COMMITTEE IS UNHAPPY'; }
-  else                     { title='MARGIN CALL'; sub='YOUR FUND HAS BEEN LIQUIDATED'; }
+  gameArea.classList.remove('active');
+  hud.classList.remove('active');
+  pauseBtn.classList.remove('active');
+  pauseOver.classList.remove('active');
 
-  document.getElementById('goTitle').textContent = title;
-  document.getElementById('goSub').textContent = sub;
-  document.getElementById('goScore').textContent = '$' + score.toLocaleString();
-  document.getElementById('goCaught').textContent = caught;
-  document.getElementById('goMissed').textContent = missed;
-  document.getElementById('goCombo').textContent = '×' + maxCombo;
+  const s=score;
+  let title,sub;
+  if(s>=5000)      {title='LEGENDARY FUND';    sub='WARREN BUFFETT HAS NOTICED YOU';}
+  else if(s>=2500) {title='STRONG ALPHA';       sub='YOUR LPs ARE IMPRESSED';}
+  else if(s>=1000) {title='DECENT RETURN';      sub='BETTER THAN BONDS. BARELY.';}
+  else if(s>=0)    {title='FLAT BOOK';           sub='YOU SURVIVED. THAT\'S SOMETHING.';}
+  else if(s>=-500) {title='DRAWDOWN';            sub='THE RISK COMMITTEE IS UNHAPPY';}
+  else             {title='MARGIN CALL';         sub='YOUR FUND HAS BEEN LIQUIDATED';}
 
-  const epitaphs = COMMENTS.gameover;
-  document.getElementById('goEpitaph').textContent = epitaphs[Math.floor(Math.random()*epitaphs.length)];
+  document.getElementById('go-title').textContent=title;
+  document.getElementById('go-sub').textContent=sub;
+  document.getElementById('go-score').textContent='$'+score.toLocaleString();
+  document.getElementById('go-caught').textContent=caught;
+  document.getElementById('go-missed').textContent=missed;
+  document.getElementById('go-combo').textContent='×'+maxCombo;
+  document.getElementById('epitaph').textContent=rnd(COMMENTS.over);
 
-  renderLeaderboard();
-  document.getElementById('gameWrapper').classList.remove('active');
-  document.getElementById('gameOver').classList.add('active');
+  renderLB();
+  document.getElementById('gameover').classList.add('active');
 }
 
-// ============================================================
-//  LEADERBOARD (localStorage)
-// ============================================================
-function getLeaderboard() {
-  try { return JSON.parse(localStorage.getItem('cfk_lb') || '[]'); } catch { return []; }
-}
-function saveLeaderboard(lb) {
-  try { localStorage.setItem('cfk_lb', JSON.stringify(lb)); } catch {}
-}
-function getHighScore() {
-  const lb = getLeaderboard();
-  return lb.length ? lb[0].score : 0;
-}
-function addScore(name, sc) {
-  const lb = getLeaderboard();
-  lb.push({ name: name.toUpperCase() || 'ANON FUND', score: sc, time: elapsed, combo: maxCombo });
+// ── LEADERBOARD ──────────────────────────────────────────────
+function getLB(){ try{return JSON.parse(localStorage.getItem('cfk2')||'[]');}catch{return[];} }
+function saveLB(lb){ try{localStorage.setItem('cfk2',JSON.stringify(lb));}catch{} }
+function getHS(){ const lb=getLB(); return lb.length?lb[0].score:0; }
+function addToLB(name,sc){
+  const lb=getLB();
+  lb.push({name:name.toUpperCase()||'ANON FUND',score:sc});
   lb.sort((a,b)=>b.score-a.score);
-  saveLeaderboard(lb.slice(0,10));
+  saveLB(lb.slice(0,10));
   return lb;
 }
-function renderLeaderboard(highlight=-1) {
-  const lb = getLeaderboard();
-  const el = document.getElementById('leaderboard');
-  if (!lb.length) { el.style.display='none'; return; }
+function renderLB(hi=-1){
+  const lb=getLB();
+  const el=document.getElementById('lb');
+  if(!lb.length){el.style.display='none';return;}
   el.style.display='block';
-  el.innerHTML = '<div class="lb-header">📊 HALL OF GAINS — TOP 10</div>' +
+  el.innerHTML='<div class="lb-hdr">📊 HALL OF GAINS</div>'+
     lb.slice(0,8).map((e,i)=>
-      `<div class="lb-row${i===highlight?' highlight':''}">
-        <span class="lb-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span>
+      `<div class="lb-row${i===hi?' me':''}">
+        <span class="lb-rank">${['🥇','🥈','🥉'][i]||'#'+(i+1)}</span>
         <span class="lb-name">${e.name}</span>
         <span class="lb-score">$${e.score.toLocaleString()}</span>
       </div>`
     ).join('');
 }
 
-document.getElementById('saveScore').addEventListener('click', () => {
-  const name = document.getElementById('playerName').value.trim() || 'ANON FUND';
-  addScore(name, score);
-  const lb = getLeaderboard();
-  const idx = lb.findIndex(e=>e.name===name.toUpperCase() && e.score===score);
-  renderLeaderboard(idx);
-  document.getElementById('saveScore').textContent = '✓ SAVED';
-  document.getElementById('saveScore').disabled = true;
+document.getElementById('save-btn').addEventListener('click',()=>{
+  const name=document.getElementById('player-name').value.trim()||'ANON FUND';
+  const lb=addToLB(name,score);
+  const hi=lb.findIndex(e=>e.name===name.toUpperCase()&&e.score===score);
+  renderLB(hi);
+  document.getElementById('save-btn').textContent='✓';
+  document.getElementById('save-btn').disabled=true;
+});
+document.getElementById('start-btn').addEventListener('click',startGame);
+document.getElementById('again-btn').addEventListener('click',startGame);
+document.getElementById('menu-btn').addEventListener('click',()=>{
+  document.getElementById('gameover').classList.remove('active');
+  document.getElementById('menu').classList.add('active');
+  document.getElementById('menu-hs').textContent=getHS().toLocaleString();
 });
 
-document.getElementById('menuHS').textContent = getHighScore().toLocaleString();
-
-// ============================================================
-//  MENU CHART (fake crash chart)
-// ============================================================
-function drawMenuChart() {
-  const c = document.getElementById('menuChart');
-  const ctx2 = c.getContext('2d');
-  // Use explicit pixel size — offsetWidth is 0 on iOS before first paint
-  const W = Math.min(400, window.innerWidth * 0.85);
-  const H = 100;
-  const dpr = window.devicePixelRatio || 1;
-  c.width = W * dpr;
-  c.height = H * dpr;
-  c.style.width = W + 'px';
-  c.style.height = H + 'px';
-  ctx2.scale(dpr, dpr);
-
-  // Generate dramatic chart
-  const pts = [];
-  let v = H * 0.25;
-  for (let i=0;i<80;i++) {
-    v += (Math.random()-0.45)*8;
-    if (i > 55) v += 6 + Math.random()*5; // crash
-    v = Math.max(H*0.1, Math.min(H*0.9, v));
-    pts.push(v);
-  }
-
-  // Gradient fill
-  const grad = ctx2.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#ff335522');
-  grad.addColorStop(1,'transparent');
-
-  ctx2.beginPath();
-  ctx2.moveTo(0, pts[0]);
-  for (let i=1;i<pts.length;i++) ctx2.lineTo((i/(pts.length-1))*W, pts[i]);
-  ctx2.lineTo(W, H); ctx2.lineTo(0, H); ctx2.closePath();
-  ctx2.fillStyle = grad;
-  ctx2.fill();
-
-  ctx2.beginPath();
-  ctx2.moveTo(0, pts[0]);
-  for (let i=1;i<pts.length;i++) ctx2.lineTo((i/(pts.length-1))*W, pts[i]);
-  ctx2.strokeStyle = '#ff3355';
-  ctx2.lineWidth = 2;
-  ctx2.shadowBlur = 8;
-  ctx2.shadowColor = '#ff3355';
-  ctx2.stroke();
-
-  // "YOU ARE HERE" arrow
-  ctx2.fillStyle = '#ff3355';
-  ctx2.font = '600 9px Courier New, monospace';
-  ctx2.textAlign = 'right';
-  ctx2.fillText('YOU ARE HERE →', W-4, pts[pts.length-1] - 8);
-}
-
-// ============================================================
-//  BUTTONS
-// ============================================================
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('playAgain').addEventListener('click', () => {
-  document.getElementById('saveScore').textContent = 'SAVE';
-  document.getElementById('saveScore').disabled = false;
-  document.getElementById('playerName').value = '';
-  startGame();
-});
-document.getElementById('backToMenu').addEventListener('click', () => {
-  document.getElementById('gameOver').classList.remove('active');
-  document.getElementById('gameWrapper').classList.remove('active');
-  document.getElementById('menu').style.display = 'flex';
-  document.getElementById('menuHS').textContent = getHighScore().toLocaleString();
-  state = 'menu';
-});
-
-// Init — defer to load so iOS has finished layout
-window.addEventListener('load', () => {
-  drawMenuChart();
-  document.getElementById('menu').style.display = 'flex';
-});
-
+// ── INIT ─────────────────────────────────────────────────────
+buildChart();
+document.getElementById('menu-hs').textContent=getHS().toLocaleString();
 </script>
 </body>
 </html>
