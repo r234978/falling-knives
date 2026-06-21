@@ -28,8 +28,8 @@ body {
 #ticker {
   position:fixed; top:0; left:0; right:0; z-index:999;
   background:#cc1133; color:#fff;
-  font-size:11px; font-weight:700;
-  padding:5px 0; overflow:hidden; white-space:nowrap;
+  font-size:10px; font-weight:700;
+  padding:4px 0; overflow:hidden; white-space:nowrap;
 }
 .tick-inner { display:inline-block; animation: tick 22s linear infinite; padding-left:100%; }
 @keyframes tick { from{transform:translateX(0)} to{transform:translateX(-100%)} }
@@ -82,7 +82,7 @@ body {
 
 /* ── HUD ── */
 #hud {
-  position:fixed; top:0; left:0; right:0; z-index:10;
+  position:fixed; top:24px; left:0; right:0; z-index:10;
   display:none; flex-direction:row;
   background:#0a0f1e; border-bottom:1px solid #1a2540;
 }
@@ -95,7 +95,7 @@ body {
 
 /* ── GAME AREA ── */
 #game-area {
-  position:fixed; inset:0; top:52px;
+  position:fixed; inset:0; top:76px;
   overflow:hidden; display:none;
   background:#050810;
   cursor:none;
@@ -204,7 +204,7 @@ body {
 
 /* Pause overlay */
 #pause-overlay {
-  position:fixed; inset:0; top:52px;
+  position:fixed; inset:0; top:76px;
   background:rgba(5,8,16,0.88);
   display:none; align-items:center; justify-content:center;
   flex-direction:column; gap:10px; z-index:30;
@@ -239,7 +239,7 @@ body {
 .name-row input:focus { border-color:#00d4ff; }
 .name-row button {
   background:#00ff88; border:none; color:#000;
-  font-family:'Courier New',monospace; font-size:11px; font-weight:700;
+  font-family:'Courier New',monospace; font-size:10px; font-weight:700;
   padding:9px 14px; cursor:pointer; letter-spacing:1px;
 }
 
@@ -259,7 +259,7 @@ body {
 
 /* Speed alert */
 #speed-alert {
-  position:fixed; top:60px; left:50%; transform:translateX(-50%);
+  position:fixed; top:84px; left:50%; transform:translateX(-50%);
   font-family:'Courier New',monospace; font-weight:700;
   font-size:clamp(12px,3.5vw,16px); color:#ffd700;
   text-shadow:0 0 16px #ffd700; letter-spacing:2px;
@@ -281,7 +281,7 @@ body {
 
 /* Pause btn */
 #pause-btn {
-  position:fixed; top:56px; right:8px; z-index:15;
+  position:fixed; top:80px; right:8px; z-index:15;
   background:transparent; border:1px solid #1a2540; color:#4a5568;
   font-family:'Courier New',monospace; font-size:10px;
   padding:4px 9px; cursor:pointer; letter-spacing:1px;
@@ -382,12 +382,12 @@ body {
 // ── CONFIG ──────────────────────────────────────────────────
 const KNIVES = [
   {e:'📉', l:'SPY',  pts:10, pen:8,  spd:1.0, sz:34, rare:false},
-  {e:'🔪', l:'NVDA', pts:25, pen:20, spd:1.3, sz:30, rare:false},
-  {e:'💊', l:'TSLA', pts:40, pen:30, spd:1.6, sz:28, rare:false},
+  {e:'🔪', l:'NVDA', pts:25, pen:20, spd:1.5, sz:30, rare:false},
+  {e:'💊', l:'TSLA', pts:40, pen:30, spd:1.9, sz:28, rare:false},
   {e:'🌕', l:'COIN', pts:15, pen:12, spd:0.9, sz:32, rare:false},
-  {e:'🦍', l:'GME',  pts:60, pen:50, spd:2.0, sz:26, rare:true },
-  {e:'🐸', l:'PEPE', pts:80, pen:0,  spd:2.4, sz:24, rare:true },
-  {e:'🚀', l:'ARKK', pts:100,pen:80, spd:2.8, sz:22, rare:true },
+  {e:'🦍', l:'GME',  pts:60, pen:50, spd:2.5, sz:26, rare:true },
+  {e:'🐸', l:'PEPE', pts:80, pen:0,  spd:3.0, sz:24, rare:true },
+  {e:'🚀', l:'ARKK', pts:100,pen:80, spd:3.8, sz:22, rare:true },
 ];
 const POWERUPS = [
   {e:'📞', l:'MARGIN CALL',   fx:'bad',  sz:28},
@@ -403,7 +403,7 @@ const COMMENTS = {
   combo:['"You\'re in the zone. Circuit breakers are worried."','"Goldman wants your trading strategy."','"You\'re the algo now."','"This is what they mean by flow state."'],
   over:['"The market can stay irrational longer than you can stay solvent." — Keynes','"Be fearful when others are greedy. You were greedy." — Buffett (adapted)','"Rule #1: Don\'t lose money. Rule #2: See Rule #1." — Buffett (you ignored both)','"Behind every stock is a company. You forgot the company." — Lynch','"Derivatives are weapons of mass destruction." — Buffett (re: your gameplay)','"Risk management is for people who plan on surviving." — Nobody (apparently)'],
 };
-const SPEED_LABELS = ['LOW','MEDIUM','HIGH','EXTREME','INSANE','💀REKT'];
+const SPEED_LABELS = ['LOW','RISING','🔥HIGH','⚡EXTREME','💀INSANE','☠REKT'];
 
 // ── STATE ────────────────────────────────────────────────────
 let score=0, missed=0, caught=0, elapsed=0;
@@ -452,11 +452,11 @@ function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function areaW(){ return gameArea.clientWidth; }
 function areaH(){ return gameArea.clientHeight; }
 function getSpeedLevel(){
-  if(elapsed<20) return 0;
-  if(elapsed<45) return 1;
-  if(elapsed<75) return 2;
-  if(elapsed<110)return 3;
-  if(elapsed<150)return 4;
+  if(elapsed<8)  return 0;
+  if(elapsed<16) return 1;
+  if(elapsed<24) return 2;
+  if(elapsed<32) return 3;
+  if(elapsed<42) return 4;
   return 5;
 }
 function paddleW(){ return areaW()*PADDLE_W_FRAC; }
@@ -484,7 +484,7 @@ function popup(x, y, text, color){
 // ── SPAWN ────────────────────────────────────────────────────
 function spawnObj(){
   const sl = getSpeedLevel();
-  const baseSpd = (1+sl*0.55) * (areaH()/500);
+  const baseSpd = (1.6+sl*1.1) * (areaH()/500);
   const W = areaW();
 
   if(Math.random()<0.08){
@@ -580,12 +580,13 @@ function loop(){
 
   // spawn
   const sl=getSpeedLevel();
-  const si=Math.max(28, 110-sl*16);
+  const si=Math.max(14, 80-sl*14);
   if(++spawnTimer>=si){
     spawnTimer=0;
     spawnObj();
-    if(sl>=3&&Math.random()<0.3) spawnObj();
-    if(sl>=5&&Math.random()<0.2) spawnObj();
+    if(sl>=2&&Math.random()<0.4) spawnObj();
+    if(sl>=4&&Math.random()<0.5) spawnObj();
+    if(sl>=5&&Math.random()<0.5) spawnObj();
   }
 
   const dead=[];
